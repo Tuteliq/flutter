@@ -384,9 +384,10 @@ class SafeNest {
     // Extract metadata from headers
     lastRequestId = response.headers['x-request-id'];
 
-    final limit = int.tryParse(response.headers['x-usage-limit'] ?? '');
-    final used = int.tryParse(response.headers['x-usage-used'] ?? '');
-    final remaining = int.tryParse(response.headers['x-usage-remaining'] ?? '');
+    // Monthly usage headers
+    final limit = int.tryParse(response.headers['x-monthly-limit'] ?? '');
+    final used = int.tryParse(response.headers['x-monthly-used'] ?? '');
+    final remaining = int.tryParse(response.headers['x-monthly-remaining'] ?? '');
 
     if (limit != null && used != null && remaining != null) {
       usage = Usage(limit: limit, used: used, remaining: remaining);

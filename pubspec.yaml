@@ -1,6 +1,6 @@
 name: safenest
 description: Official Flutter/Dart SDK for SafeNest - AI-powered child safety API for content moderation, bullying detection, and grooming prevention.
-version: 1.0.0
+version: 1.0.1
 homepage: https://safenest.dev
 repository: https://github.com/SafeNestSDK/flutter
 issue_tracker: https://github.com/SafeNestSDK/flutter/issues
