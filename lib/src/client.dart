@@ -328,6 +328,22 @@ class SafeNest {
   }
 
   // ===========================================================================
+  // Account Management (GDPR)
+  // ===========================================================================
+
+  /// Delete all account data (GDPR Article 17 — Right to Erasure).
+  Future<AccountDeletionResult> deleteAccountData() async {
+    final data = await _requestWithMethod('DELETE', '/api/v1/account/data');
+    return AccountDeletionResult.fromJson(data);
+  }
+
+  /// Export all account data as JSON (GDPR Article 20 — Right to Data Portability).
+  Future<AccountExportResult> exportAccountData() async {
+    final data = await _requestWithMethod('GET', '/api/v1/account/export');
+    return AccountExportResult.fromJson(data);
+  }
+
+  // ===========================================================================
   // Private Methods
   // ===========================================================================
 
@@ -335,11 +351,19 @@ class SafeNest {
     String path,
     Map<String, dynamic> body,
   ) async {
+    return _requestWithMethod('POST', path, body: body);
+  }
+
+  Future<Map<String, dynamic>> _requestWithMethod(
+    String method,
+    String path, {
+    Map<String, dynamic>? body,
+  }) async {
     Exception? lastError;
 
     for (var attempt = 0; attempt < _maxRetries; attempt++) {
       try {
-        return await _performRequest(path, body);
+        return await _performRequest(method, path, body: body);
       } on AuthenticationException {
         rethrow;
       } on ValidationException {
@@ -358,23 +382,30 @@ class SafeNest {
   }
 
   Future<Map<String, dynamic>> _performRequest(
-    String path,
-    Map<String, dynamic> body,
-  ) async {
+    String method,
+    String path, {
+    Map<String, dynamic>? body,
+  }) async {
     final uri = Uri.parse('$_baseUrl$path');
     final http.Response response;
+    final headers = {
+      'Authorization': 'Bearer $_apiKey',
+      'Content-Type': 'application/json',
+    };
 
     try {
-      response = await _client
-          .post(
-            uri,
-            headers: {
-              'Authorization': 'Bearer $_apiKey',
-              'Content-Type': 'application/json',
-            },
-            body: jsonEncode(body),
-          )
-          .timeout(_timeout);
+      switch (method) {
+        case 'DELETE':
+          response = await _client.delete(uri, headers: headers).timeout(_timeout);
+          break;
+        case 'GET':
+          response = await _client.get(uri, headers: headers).timeout(_timeout);
+          break;
+        default:
+          response = await _client
+              .post(uri, headers: headers, body: body != null ? jsonEncode(body) : null)
+              .timeout(_timeout);
+      }
     } on TimeoutException {
       throw TimeoutException('Request timed out after ${_timeout.inSeconds}s');
     } catch (e) {

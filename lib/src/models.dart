@@ -438,6 +438,49 @@ class ReportResult {
   final Map<String, dynamic>? metadata;
 }
 
+// =============================================================================
+// Account Management (GDPR)
+// =============================================================================
+
+/// Result of account data deletion (GDPR Article 17).
+class AccountDeletionResult {
+  const AccountDeletionResult({
+    required this.message,
+    required this.deletedCount,
+  });
+
+  factory AccountDeletionResult.fromJson(Map<String, dynamic> json) {
+    return AccountDeletionResult(
+      message: json['message'] as String,
+      deletedCount: json['deleted_count'] as int,
+    );
+  }
+
+  final String message;
+  final int deletedCount;
+}
+
+/// Result of account data export (GDPR Article 20).
+class AccountExportResult {
+  const AccountExportResult({
+    required this.userId,
+    required this.exportedAt,
+    required this.data,
+  });
+
+  factory AccountExportResult.fromJson(Map<String, dynamic> json) {
+    return AccountExportResult(
+      userId: json['userId'] as String,
+      exportedAt: json['exportedAt'] as String,
+      data: json['data'] as Map<String, dynamic>,
+    );
+  }
+
+  final String userId;
+  final String exportedAt;
+  final Map<String, dynamic> data;
+}
+
 /// API usage information.
 class Usage {
   const Usage({
