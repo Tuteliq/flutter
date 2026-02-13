@@ -66,3 +66,19 @@ class NetworkException extends TuteliqException {
   @override
   String toString() => 'NetworkException: $message';
 }
+
+/// Thrown when the monthly quota is exceeded.
+class QuotaExceededException extends TuteliqException {
+  const QuotaExceededException(super.message, [super.details]);
+
+  @override
+  String toString() => 'QuotaExceededException: $message';
+}
+
+/// Thrown when an endpoint requires a higher tier.
+class TierAccessException extends TuteliqException {
+  const TierAccessException(super.message, [super.details]);
+
+  @override
+  String toString() => 'TierAccessException: $message';
+}

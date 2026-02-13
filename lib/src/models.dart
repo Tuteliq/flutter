@@ -848,3 +848,500 @@ class BreachResult {
 
   final BreachRecord breach;
 }
+
+// =============================================================================
+// Voice Analysis
+// =============================================================================
+
+/// A segment of a voice transcription.
+class TranscriptionSegment {
+  const TranscriptionSegment({
+    required this.start,
+    required this.end,
+    required this.text,
+  });
+
+  factory TranscriptionSegment.fromJson(Map<String, dynamic> json) {
+    return TranscriptionSegment(
+      start: (json['start'] as num).toDouble(),
+      end: (json['end'] as num).toDouble(),
+      text: json['text'] as String,
+    );
+  }
+
+  final double start;
+  final double end;
+  final String text;
+}
+
+/// Transcription result from voice analysis.
+class TranscriptionResult {
+  const TranscriptionResult({
+    required this.text,
+    this.language,
+    this.duration,
+    this.segments,
+  });
+
+  factory TranscriptionResult.fromJson(Map<String, dynamic> json) {
+    return TranscriptionResult(
+      text: json['text'] as String,
+      language: json['language'] as String?,
+      duration: (json['duration'] as num?)?.toDouble(),
+      segments: (json['segments'] as List?)
+          ?.map((s) => TranscriptionSegment.fromJson(s as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+
+  final String text;
+  final String? language;
+  final double? duration;
+  final List<TranscriptionSegment>? segments;
+}
+
+/// Result of voice safety analysis.
+class VoiceAnalysisResult {
+  const VoiceAnalysisResult({
+    this.fileId,
+    this.transcription,
+    this.analysis,
+    this.overallRiskScore,
+    this.overallSeverity,
+    this.externalId,
+    this.customerId,
+    this.metadata,
+  });
+
+  factory VoiceAnalysisResult.fromJson(Map<String, dynamic> json) {
+    return VoiceAnalysisResult(
+      fileId: json['file_id'] as String?,
+      transcription: json['transcription'] != null
+          ? TranscriptionResult.fromJson(
+              json['transcription'] as Map<String, dynamic>)
+          : null,
+      analysis: json['analysis'] as Map<String, dynamic>?,
+      overallRiskScore: (json['overall_risk_score'] as num?)?.toDouble(),
+      overallSeverity: json['overall_severity'] as String?,
+      externalId: json['external_id'] as String?,
+      customerId: json['customer_id'] as String?,
+      metadata: json['metadata'] as Map<String, dynamic>?,
+    );
+  }
+
+  final String? fileId;
+  final TranscriptionResult? transcription;
+  final Map<String, dynamic>? analysis;
+  final double? overallRiskScore;
+  final String? overallSeverity;
+  final String? externalId;
+  final String? customerId;
+  final Map<String, dynamic>? metadata;
+}
+
+// =============================================================================
+// Image Analysis
+// =============================================================================
+
+/// Vision analysis result for an image.
+class VisionResult {
+  const VisionResult({
+    this.extractedText,
+    this.visualCategories,
+    this.visualSeverity,
+    this.visualConfidence,
+    this.visualDescription,
+    this.containsText,
+    this.containsFaces,
+  });
+
+  factory VisionResult.fromJson(Map<String, dynamic> json) {
+    return VisionResult(
+      extractedText: json['extracted_text'] as String?,
+      visualCategories: (json['visual_categories'] as List?)?.cast<String>(),
+      visualSeverity: json['visual_severity'] as String?,
+      visualConfidence: (json['visual_confidence'] as num?)?.toDouble(),
+      visualDescription: json['visual_description'] as String?,
+      containsText: json['contains_text'] as bool?,
+      containsFaces: json['contains_faces'] as bool?,
+    );
+  }
+
+  final String? extractedText;
+  final List<String>? visualCategories;
+  final String? visualSeverity;
+  final double? visualConfidence;
+  final String? visualDescription;
+  final bool? containsText;
+  final bool? containsFaces;
+}
+
+/// Result of image safety analysis.
+class ImageAnalysisResult {
+  const ImageAnalysisResult({
+    this.fileId,
+    this.vision,
+    this.textAnalysis,
+    this.overallRiskScore,
+    this.overallSeverity,
+    this.externalId,
+    this.customerId,
+    this.metadata,
+  });
+
+  factory ImageAnalysisResult.fromJson(Map<String, dynamic> json) {
+    return ImageAnalysisResult(
+      fileId: json['file_id'] as String?,
+      vision: json['vision'] != null
+          ? VisionResult.fromJson(json['vision'] as Map<String, dynamic>)
+          : null,
+      textAnalysis: json['text_analysis'] as Map<String, dynamic>?,
+      overallRiskScore: (json['overall_risk_score'] as num?)?.toDouble(),
+      overallSeverity: json['overall_severity'] as String?,
+      externalId: json['external_id'] as String?,
+      customerId: json['customer_id'] as String?,
+      metadata: json['metadata'] as Map<String, dynamic>?,
+    );
+  }
+
+  final String? fileId;
+  final VisionResult? vision;
+  final Map<String, dynamic>? textAnalysis;
+  final double? overallRiskScore;
+  final String? overallSeverity;
+  final String? externalId;
+  final String? customerId;
+  final Map<String, dynamic>? metadata;
+}
+
+// =============================================================================
+// Webhooks
+// =============================================================================
+
+/// A webhook configuration.
+class Webhook {
+  const Webhook({
+    required this.id,
+    required this.url,
+    required this.events,
+    required this.active,
+    this.secret,
+    this.createdAt,
+    this.updatedAt,
+  });
+
+  factory Webhook.fromJson(Map<String, dynamic> json) {
+    return Webhook(
+      id: json['id'] as String,
+      url: json['url'] as String,
+      events: List<String>.from(json['events'] as List),
+      active: json['active'] as bool,
+      secret: json['secret'] as String?,
+      createdAt: json['created_at'] as String?,
+      updatedAt: json['updated_at'] as String?,
+    );
+  }
+
+  final String id;
+  final String url;
+  final List<String> events;
+  final bool active;
+  final String? secret;
+  final String? createdAt;
+  final String? updatedAt;
+}
+
+/// Result from listing webhooks.
+class WebhookListResult {
+  const WebhookListResult({required this.webhooks});
+
+  factory WebhookListResult.fromJson(Map<String, dynamic> json) {
+    return WebhookListResult(
+      webhooks: (json['webhooks'] as List)
+          .map((w) => Webhook.fromJson(w as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+
+  final List<Webhook> webhooks;
+}
+
+/// Input for creating a webhook.
+class CreateWebhookInput {
+  const CreateWebhookInput({
+    required this.url,
+    required this.events,
+    this.active = true,
+  });
+
+  final String url;
+  final List<String> events;
+  final bool active;
+}
+
+/// Result from creating a webhook.
+class CreateWebhookResult {
+  const CreateWebhookResult({required this.message, required this.webhook});
+
+  factory CreateWebhookResult.fromJson(Map<String, dynamic> json) {
+    return CreateWebhookResult(
+      message: json['message'] as String,
+      webhook: Webhook.fromJson(json['webhook'] as Map<String, dynamic>),
+    );
+  }
+
+  final String message;
+  final Webhook webhook;
+}
+
+/// Input for updating a webhook.
+class UpdateWebhookInput {
+  const UpdateWebhookInput({this.url, this.events, this.active});
+
+  final String? url;
+  final List<String>? events;
+  final bool? active;
+}
+
+/// Result from updating a webhook.
+class UpdateWebhookResult {
+  const UpdateWebhookResult({required this.message, required this.webhook});
+
+  factory UpdateWebhookResult.fromJson(Map<String, dynamic> json) {
+    return UpdateWebhookResult(
+      message: json['message'] as String,
+      webhook: Webhook.fromJson(json['webhook'] as Map<String, dynamic>),
+    );
+  }
+
+  final String message;
+  final Webhook webhook;
+}
+
+/// Result from deleting a webhook.
+class DeleteWebhookResult {
+  const DeleteWebhookResult({required this.message});
+
+  factory DeleteWebhookResult.fromJson(Map<String, dynamic> json) {
+    return DeleteWebhookResult(message: json['message'] as String);
+  }
+
+  final String message;
+}
+
+/// Result from testing a webhook.
+class TestWebhookResult {
+  const TestWebhookResult({required this.message, this.statusCode});
+
+  factory TestWebhookResult.fromJson(Map<String, dynamic> json) {
+    return TestWebhookResult(
+      message: json['message'] as String,
+      statusCode: json['status_code'] as int?,
+    );
+  }
+
+  final String message;
+  final int? statusCode;
+}
+
+/// Result from regenerating a webhook secret.
+class RegenerateSecretResult {
+  const RegenerateSecretResult({required this.message, required this.secret});
+
+  factory RegenerateSecretResult.fromJson(Map<String, dynamic> json) {
+    return RegenerateSecretResult(
+      message: json['message'] as String,
+      secret: json['secret'] as String,
+    );
+  }
+
+  final String message;
+  final String secret;
+}
+
+// =============================================================================
+// Pricing
+// =============================================================================
+
+/// A pricing plan summary.
+class PricingPlan {
+  const PricingPlan({
+    required this.name,
+    required this.price,
+    required this.messages,
+    required this.features,
+  });
+
+  factory PricingPlan.fromJson(Map<String, dynamic> json) {
+    return PricingPlan(
+      name: json['name'] as String,
+      price: json['price'] as String,
+      messages: json['messages'] as String,
+      features: List<String>.from(json['features'] as List),
+    );
+  }
+
+  final String name;
+  final String price;
+  final String messages;
+  final List<String> features;
+}
+
+/// Result from getting pricing overview.
+class PricingResult {
+  const PricingResult({required this.plans});
+
+  factory PricingResult.fromJson(Map<String, dynamic> json) {
+    return PricingResult(
+      plans: (json['plans'] as List)
+          .map((p) => PricingPlan.fromJson(p as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+
+  final List<PricingPlan> plans;
+}
+
+/// A detailed pricing plan.
+class PricingDetailPlan {
+  const PricingDetailPlan({
+    required this.name,
+    required this.tier,
+    required this.price,
+    required this.limits,
+    required this.features,
+    required this.endpoints,
+  });
+
+  factory PricingDetailPlan.fromJson(Map<String, dynamic> json) {
+    return PricingDetailPlan(
+      name: json['name'] as String,
+      tier: json['tier'] as String,
+      price: json['price'] as Map<String, dynamic>,
+      limits: json['limits'] as Map<String, dynamic>,
+      features: json['features'] as Map<String, dynamic>,
+      endpoints: List<String>.from(json['endpoints'] as List),
+    );
+  }
+
+  final String name;
+  final String tier;
+  final Map<String, dynamic> price;
+  final Map<String, dynamic> limits;
+  final Map<String, dynamic> features;
+  final List<String> endpoints;
+}
+
+/// Result from getting pricing details.
+class PricingDetailsResult {
+  const PricingDetailsResult({required this.plans});
+
+  factory PricingDetailsResult.fromJson(Map<String, dynamic> json) {
+    return PricingDetailsResult(
+      plans: (json['plans'] as List)
+          .map((p) => PricingDetailPlan.fromJson(p as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+
+  final List<PricingDetailPlan> plans;
+}
+
+// =============================================================================
+// Usage
+// =============================================================================
+
+/// A single day of usage data.
+class UsageDay {
+  const UsageDay({
+    required this.date,
+    required this.totalRequests,
+    required this.successRequests,
+    required this.errorRequests,
+  });
+
+  factory UsageDay.fromJson(Map<String, dynamic> json) {
+    return UsageDay(
+      date: json['date'] as String,
+      totalRequests: json['total_requests'] as int,
+      successRequests: json['success_requests'] as int,
+      errorRequests: json['error_requests'] as int,
+    );
+  }
+
+  final String date;
+  final int totalRequests;
+  final int successRequests;
+  final int errorRequests;
+}
+
+/// Result from getting usage history.
+class UsageHistoryResult {
+  const UsageHistoryResult({required this.apiKeyId, required this.days});
+
+  factory UsageHistoryResult.fromJson(Map<String, dynamic> json) {
+    return UsageHistoryResult(
+      apiKeyId: json['api_key_id'] as String,
+      days: (json['days'] as List)
+          .map((d) => UsageDay.fromJson(d as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+
+  final String apiKeyId;
+  final List<UsageDay> days;
+}
+
+/// Result from getting usage broken down by tool.
+class UsageByToolResult {
+  const UsageByToolResult({
+    required this.date,
+    required this.tools,
+    required this.endpoints,
+  });
+
+  factory UsageByToolResult.fromJson(Map<String, dynamic> json) {
+    return UsageByToolResult(
+      date: json['date'] as String,
+      tools: Map<String, int>.from(json['tools'] as Map),
+      endpoints: Map<String, int>.from(json['endpoints'] as Map),
+    );
+  }
+
+  final String date;
+  final Map<String, int> tools;
+  final Map<String, int> endpoints;
+}
+
+/// Result from getting monthly usage summary.
+class UsageMonthlyResult {
+  const UsageMonthlyResult({
+    required this.tier,
+    required this.tierDisplayName,
+    required this.billing,
+    required this.usage,
+    required this.rateLimit,
+    this.recommendations,
+    required this.links,
+  });
+
+  factory UsageMonthlyResult.fromJson(Map<String, dynamic> json) {
+    return UsageMonthlyResult(
+      tier: json['tier'] as String,
+      tierDisplayName: json['tier_display_name'] as String,
+      billing: json['billing'] as Map<String, dynamic>,
+      usage: json['usage'] as Map<String, dynamic>,
+      rateLimit: json['rate_limit'] as Map<String, dynamic>,
+      recommendations: json['recommendations'] as Map<String, dynamic>?,
+      links: json['links'] as Map<String, dynamic>,
+    );
+  }
+
+  final String tier;
+  final String tierDisplayName;
+  final Map<String, dynamic> billing;
+  final Map<String, dynamic> usage;
+  final Map<String, dynamic> rateLimit;
+  final Map<String, dynamic>? recommendations;
+  final Map<String, dynamic> links;
+}

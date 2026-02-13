@@ -18,6 +18,15 @@ import 'models.dart';
 /// }
 /// ```
 class Tuteliq {
+  static const String _sdkIdentifier = 'Flutter SDK';
+
+  static String _resolvePlatform(String? platform) {
+    if (platform != null && platform.isNotEmpty) {
+      return '$platform - $_sdkIdentifier';
+    }
+    return _sdkIdentifier;
+  }
+
   /// Creates a new Tuteliq client.
   ///
   /// [apiKey] is required and must be a valid Tuteliq API key.
@@ -74,7 +83,9 @@ class Tuteliq {
     Map<String, dynamic>? metadata,
   }) async {
     final body = <String, dynamic>{'text': content};
-    if (context != null) body['context'] = context.toJson();
+    final contextMap = context?.toJson() ?? <String, dynamic>{};
+    contextMap['platform'] = _resolvePlatform(context?.platform);
+    body['context'] = contextMap;
     if (externalId != null) body['external_id'] = externalId;
     if (metadata != null) body['metadata'] = metadata;
 
@@ -101,7 +112,8 @@ class Tuteliq {
     final contextMap = <String, dynamic>{};
     if (input.childAge != null) contextMap['child_age'] = input.childAge;
     if (input.context != null) contextMap.addAll(input.context!.toJson());
-    if (contextMap.isNotEmpty) body['context'] = contextMap;
+    contextMap['platform'] = _resolvePlatform(input.context?.platform);
+    body['context'] = contextMap;
 
     if (input.externalId != null) body['external_id'] = input.externalId;
     if (input.metadata != null) body['metadata'] = input.metadata;
@@ -118,7 +130,9 @@ class Tuteliq {
     Map<String, dynamic>? metadata,
   }) async {
     final body = <String, dynamic>{'text': content};
-    if (context != null) body['context'] = context.toJson();
+    final contextMap = context?.toJson() ?? <String, dynamic>{};
+    contextMap['platform'] = _resolvePlatform(context?.platform);
+    body['context'] = contextMap;
     if (externalId != null) body['external_id'] = externalId;
     if (metadata != null) body['metadata'] = metadata;
 
@@ -256,7 +270,9 @@ class Tuteliq {
         {'sender': 'user', 'text': content}
       ],
     };
-    if (context != null) body['context'] = context.toJson();
+    final contextMap = context?.toJson() ?? <String, dynamic>{};
+    contextMap['platform'] = _resolvePlatform(context?.platform);
+    body['context'] = contextMap;
     if (externalId != null) body['external_id'] = externalId;
     if (metadata != null) body['metadata'] = metadata;
 
@@ -277,7 +293,9 @@ class Tuteliq {
       body['messages'] = input.messages!.map((m) => m.toJson()).toList();
     }
 
-    if (input.context != null) body['context'] = input.context!.toJson();
+    final contextMap = input.context?.toJson() ?? <String, dynamic>{};
+    contextMap['platform'] = _resolvePlatform(input.context?.platform);
+    body['context'] = contextMap;
     if (input.externalId != null) body['external_id'] = input.externalId;
     if (input.metadata != null) body['metadata'] = input.metadata;
 
@@ -460,6 +478,10 @@ class Tuteliq {
         rethrow;
       } on NotFoundException {
         rethrow;
+      } on QuotaExceededException {
+        rethrow;
+      } on TierAccessException {
+        rethrow;
       } catch (e) {
         lastError = e as Exception;
         if (attempt < _maxRetries - 1) {
@@ -546,6 +568,10 @@ class Tuteliq {
         throw ValidationException(message, details);
       case 401:
         throw AuthenticationException(message, details);
+      case 402:
+        throw QuotaExceededException(message, details);
+      case 403:
+        throw TierAccessException(message, details);
       case 404:
         throw NotFoundException(message, details);
       case 429:
@@ -556,5 +582,263 @@ class Tuteliq {
         }
         throw TuteliqException(message, details);
     }
+  }
+
+  Future<Map<String, dynamic>> _multipartRequest(
+    String path, {
+    required List<int> file,
+    required String filename,
+    required String fieldName,
+    Map<String, String> fields = const {},
+  }) async {
+    Exception? lastError;
+
+    for (var attempt = 0; attempt < _maxRetries; attempt++) {
+      try {
+        return await _performMultipartRequest(
+          path,
+          file: file,
+          filename: filename,
+          fieldName: fieldName,
+          fields: fields,
+        );
+      } on AuthenticationException {
+        rethrow;
+      } on ValidationException {
+        rethrow;
+      } on NotFoundException {
+        rethrow;
+      } on QuotaExceededException {
+        rethrow;
+      } on TierAccessException {
+        rethrow;
+      } catch (e) {
+        lastError = e as Exception;
+        if (attempt < _maxRetries - 1) {
+          await Future.delayed(_retryDelay * (1 << attempt));
+        }
+      }
+    }
+
+    throw lastError ?? const TuteliqException('Request failed after retries');
+  }
+
+  Future<Map<String, dynamic>> _performMultipartRequest(
+    String path, {
+    required List<int> file,
+    required String filename,
+    required String fieldName,
+    Map<String, String> fields = const {},
+  }) async {
+    final uri = Uri.parse('$_baseUrl$path');
+    final request = http.MultipartRequest('POST', uri);
+    request.headers['Authorization'] = 'Bearer $_apiKey';
+    request.fields.addAll(fields);
+    request.files.add(http.MultipartFile.fromBytes(
+      fieldName,
+      file,
+      filename: filename,
+    ));
+
+    final http.StreamedResponse streamedResponse;
+    try {
+      streamedResponse = await request.send().timeout(_timeout);
+    } on TimeoutException {
+      throw TimeoutException('Request timed out after ${_timeout.inSeconds}s');
+    } catch (e) {
+      throw NetworkException(e.toString());
+    }
+
+    final response = await http.Response.fromStream(streamedResponse);
+
+    // Extract metadata from headers
+    lastRequestId = response.headers['x-request-id'];
+
+    final limit = int.tryParse(response.headers['x-monthly-limit'] ?? '');
+    final used = int.tryParse(response.headers['x-monthly-used'] ?? '');
+    final remaining =
+        int.tryParse(response.headers['x-monthly-remaining'] ?? '');
+
+    if (limit != null && used != null && remaining != null) {
+      usage = Usage(limit: limit, used: used, remaining: remaining);
+    }
+
+    if (response.statusCode >= 400) {
+      _handleErrorResponse(response);
+    }
+
+    return jsonDecode(response.body) as Map<String, dynamic>;
+  }
+
+  // ===========================================================================
+  // Voice Analysis
+  // ===========================================================================
+
+  /// Analyze voice/audio content for safety concerns.
+  Future<VoiceAnalysisResult> analyzeVoice({
+    required List<int> file,
+    required String filename,
+    String analysisType = 'all',
+    String? fileId,
+    String? externalId,
+    String? customerId,
+    Map<String, dynamic>? metadata,
+    String? ageGroup,
+    String? language,
+    String? platform,
+    int? childAge,
+  }) async {
+    final fields = <String, String>{
+      'analysis_type': analysisType,
+      'platform': _resolvePlatform(platform),
+    };
+    if (fileId != null) fields['file_id'] = fileId;
+    if (externalId != null) fields['external_id'] = externalId;
+    if (customerId != null) fields['customer_id'] = customerId;
+    if (metadata != null) fields['metadata'] = jsonEncode(metadata);
+    if (ageGroup != null) fields['age_group'] = ageGroup;
+    if (language != null) fields['language'] = language;
+    if (childAge != null) fields['child_age'] = childAge.toString();
+
+    final data = await _multipartRequest(
+      '/api/v1/safety/voice',
+      file: file,
+      filename: filename,
+      fieldName: 'file',
+      fields: fields,
+    );
+    return VoiceAnalysisResult.fromJson(data);
+  }
+
+  // ===========================================================================
+  // Image Analysis
+  // ===========================================================================
+
+  /// Analyze image content for safety concerns.
+  Future<ImageAnalysisResult> analyzeImage({
+    required List<int> file,
+    required String filename,
+    String analysisType = 'all',
+    String? fileId,
+    String? externalId,
+    String? customerId,
+    Map<String, dynamic>? metadata,
+    String? ageGroup,
+    String? platform,
+  }) async {
+    final fields = <String, String>{
+      'analysis_type': analysisType,
+      'platform': _resolvePlatform(platform),
+    };
+    if (fileId != null) fields['file_id'] = fileId;
+    if (externalId != null) fields['external_id'] = externalId;
+    if (customerId != null) fields['customer_id'] = customerId;
+    if (metadata != null) fields['metadata'] = jsonEncode(metadata);
+    if (ageGroup != null) fields['age_group'] = ageGroup;
+
+    final data = await _multipartRequest(
+      '/api/v1/safety/image',
+      file: file,
+      filename: filename,
+      fieldName: 'file',
+      fields: fields,
+    );
+    return ImageAnalysisResult.fromJson(data);
+  }
+
+  // ===========================================================================
+  // Webhooks
+  // ===========================================================================
+
+  /// List all webhooks.
+  Future<WebhookListResult> listWebhooks() async {
+    final data = await _requestWithMethod('GET', '/api/v1/webhooks');
+    return WebhookListResult.fromJson(data);
+  }
+
+  /// Create a new webhook.
+  Future<CreateWebhookResult> createWebhook(CreateWebhookInput input) async {
+    final body = <String, dynamic>{
+      'url': input.url,
+      'events': input.events,
+      'active': input.active,
+    };
+    final data = await _request('/api/v1/webhooks', body);
+    return CreateWebhookResult.fromJson(data);
+  }
+
+  /// Update an existing webhook.
+  Future<UpdateWebhookResult> updateWebhook(
+      String id, UpdateWebhookInput input) async {
+    final body = <String, dynamic>{};
+    if (input.url != null) body['url'] = input.url;
+    if (input.events != null) body['events'] = input.events;
+    if (input.active != null) body['active'] = input.active;
+    final data = await _requestWithMethod(
+      'PATCH',
+      '/api/v1/webhooks/$id',
+      body: body,
+    );
+    return UpdateWebhookResult.fromJson(data);
+  }
+
+  /// Delete a webhook.
+  Future<DeleteWebhookResult> deleteWebhook(String id) async {
+    final data = await _requestWithMethod('DELETE', '/api/v1/webhooks/$id');
+    return DeleteWebhookResult.fromJson(data);
+  }
+
+  /// Test a webhook by sending a test event.
+  Future<TestWebhookResult> testWebhook(String id) async {
+    final data = await _request('/api/v1/webhooks/$id/test', {});
+    return TestWebhookResult.fromJson(data);
+  }
+
+  /// Regenerate the secret for a webhook.
+  Future<RegenerateSecretResult> regenerateWebhookSecret(String id) async {
+    final data = await _request('/api/v1/webhooks/$id/secret', {});
+    return RegenerateSecretResult.fromJson(data);
+  }
+
+  // ===========================================================================
+  // Pricing
+  // ===========================================================================
+
+  /// Get pricing overview.
+  Future<PricingResult> getPricing() async {
+    final data = await _requestWithMethod('GET', '/api/v1/pricing');
+    return PricingResult.fromJson(data);
+  }
+
+  /// Get detailed pricing information.
+  Future<PricingDetailsResult> getPricingDetails() async {
+    final data = await _requestWithMethod('GET', '/api/v1/pricing/details');
+    return PricingDetailsResult.fromJson(data);
+  }
+
+  // ===========================================================================
+  // Usage
+  // ===========================================================================
+
+  /// Get usage history (daily breakdown).
+  Future<UsageHistoryResult> getUsageHistory({int? days}) async {
+    final query = days != null ? '?days=$days' : '';
+    final data =
+        await _requestWithMethod('GET', '/api/v1/usage/history$query');
+    return UsageHistoryResult.fromJson(data);
+  }
+
+  /// Get usage broken down by tool/endpoint.
+  Future<UsageByToolResult> getUsageByTool({String? date}) async {
+    final query = date != null ? '?date=$date' : '';
+    final data =
+        await _requestWithMethod('GET', '/api/v1/usage/by-tool$query');
+    return UsageByToolResult.fromJson(data);
+  }
+
+  /// Get monthly usage summary with billing and rate limit info.
+  Future<UsageMonthlyResult> getUsageMonthly() async {
+    final data = await _requestWithMethod('GET', '/api/v1/usage/monthly');
+    return UsageMonthlyResult.fromJson(data);
   }
 }
