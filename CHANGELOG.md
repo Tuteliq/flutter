@@ -1,3 +1,9 @@
+## 1.3.0
+
+### Added
+- Voice streaming support via WebSocket (`voiceStream()`)
+- `creditsUsed` field on all result types
+
 ## 1.0.0
 
 - Initial release

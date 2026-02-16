@@ -217,6 +217,7 @@ class BullyingResult {
     required this.recommendedAction,
     this.externalId,
     this.metadata,
+    this.creditsUsed,
   });
 
   factory BullyingResult.fromJson(Map<String, dynamic> json) {
@@ -230,6 +231,7 @@ class BullyingResult {
       recommendedAction: json['recommended_action'] as String,
       externalId: json['external_id'] as String?,
       metadata: json['metadata'] as Map<String, dynamic>?,
+      creditsUsed: json['credits_used'] as int?,
     );
   }
 
@@ -242,6 +244,7 @@ class BullyingResult {
   final String recommendedAction;
   final String? externalId;
   final Map<String, dynamic>? metadata;
+  final int? creditsUsed;
 }
 
 /// Result of grooming detection.
@@ -255,6 +258,7 @@ class GroomingResult {
     required this.recommendedAction,
     this.externalId,
     this.metadata,
+    this.creditsUsed,
   });
 
   factory GroomingResult.fromJson(Map<String, dynamic> json) {
@@ -267,6 +271,7 @@ class GroomingResult {
       recommendedAction: json['recommended_action'] as String,
       externalId: json['external_id'] as String?,
       metadata: json['metadata'] as Map<String, dynamic>?,
+      creditsUsed: json['credits_used'] as int?,
     );
   }
 
@@ -278,6 +283,7 @@ class GroomingResult {
   final String recommendedAction;
   final String? externalId;
   final Map<String, dynamic>? metadata;
+  final int? creditsUsed;
 }
 
 /// Result of unsafe content detection.
@@ -292,6 +298,7 @@ class UnsafeResult {
     required this.recommendedAction,
     this.externalId,
     this.metadata,
+    this.creditsUsed,
   });
 
   factory UnsafeResult.fromJson(Map<String, dynamic> json) {
@@ -305,6 +312,7 @@ class UnsafeResult {
       recommendedAction: json['recommended_action'] as String,
       externalId: json['external_id'] as String?,
       metadata: json['metadata'] as Map<String, dynamic>?,
+      creditsUsed: json['credits_used'] as int?,
     );
   }
 
@@ -317,6 +325,7 @@ class UnsafeResult {
   final String recommendedAction;
   final String? externalId;
   final Map<String, dynamic>? metadata;
+  final int? creditsUsed;
 }
 
 /// Result of quick analysis.
@@ -330,6 +339,7 @@ class AnalyzeResult {
     this.unsafe,
     this.externalId,
     this.metadata,
+    this.creditsUsed,
   });
 
   final RiskLevel riskLevel;
@@ -340,6 +350,7 @@ class AnalyzeResult {
   final UnsafeResult? unsafe;
   final String? externalId;
   final Map<String, dynamic>? metadata;
+  final int? creditsUsed;
 }
 
 /// Result of emotion analysis.
@@ -352,6 +363,7 @@ class EmotionsResult {
     required this.recommendedFollowup,
     this.externalId,
     this.metadata,
+    this.creditsUsed,
   });
 
   factory EmotionsResult.fromJson(Map<String, dynamic> json) {
@@ -363,6 +375,7 @@ class EmotionsResult {
       recommendedFollowup: json['recommended_followup'] as String,
       externalId: json['external_id'] as String?,
       metadata: json['metadata'] as Map<String, dynamic>?,
+      creditsUsed: json['credits_used'] as int?,
     );
   }
 
@@ -373,6 +386,7 @@ class EmotionsResult {
   final String recommendedFollowup;
   final String? externalId;
   final Map<String, dynamic>? metadata;
+  final int? creditsUsed;
 }
 
 /// Result of action plan generation.
@@ -384,6 +398,7 @@ class ActionPlanResult {
     required this.urgency,
     this.externalId,
     this.metadata,
+    this.creditsUsed,
   });
 
   factory ActionPlanResult.fromJson(Map<String, dynamic> json) {
@@ -394,6 +409,7 @@ class ActionPlanResult {
       urgency: json['urgency'] as String,
       externalId: json['external_id'] as String?,
       metadata: json['metadata'] as Map<String, dynamic>?,
+      creditsUsed: json['credits_used'] as int?,
     );
   }
 
@@ -403,6 +419,7 @@ class ActionPlanResult {
   final String urgency;
   final String? externalId;
   final Map<String, dynamic>? metadata;
+  final int? creditsUsed;
 }
 
 /// Result of incident report generation.
@@ -415,6 +432,7 @@ class ReportResult {
     required this.recommendedNextSteps,
     this.externalId,
     this.metadata,
+    this.creditsUsed,
   });
 
   factory ReportResult.fromJson(Map<String, dynamic> json) {
@@ -426,6 +444,7 @@ class ReportResult {
       recommendedNextSteps: List<String>.from(json['recommended_next_steps'] as List),
       externalId: json['external_id'] as String?,
       metadata: json['metadata'] as Map<String, dynamic>?,
+      creditsUsed: json['credits_used'] as int?,
     );
   }
 
@@ -436,6 +455,7 @@ class ReportResult {
   final List<String> recommendedNextSteps;
   final String? externalId;
   final Map<String, dynamic>? metadata;
+  final int? creditsUsed;
 }
 
 // =============================================================================
@@ -911,6 +931,7 @@ class VoiceAnalysisResult {
     this.externalId,
     this.customerId,
     this.metadata,
+    this.creditsUsed,
   });
 
   factory VoiceAnalysisResult.fromJson(Map<String, dynamic> json) {
@@ -926,6 +947,7 @@ class VoiceAnalysisResult {
       externalId: json['external_id'] as String?,
       customerId: json['customer_id'] as String?,
       metadata: json['metadata'] as Map<String, dynamic>?,
+      creditsUsed: json['credits_used'] as int?,
     );
   }
 
@@ -937,6 +959,7 @@ class VoiceAnalysisResult {
   final String? externalId;
   final String? customerId;
   final Map<String, dynamic>? metadata;
+  final int? creditsUsed;
 }
 
 // =============================================================================
@@ -987,6 +1010,7 @@ class ImageAnalysisResult {
     this.externalId,
     this.customerId,
     this.metadata,
+    this.creditsUsed,
   });
 
   factory ImageAnalysisResult.fromJson(Map<String, dynamic> json) {
@@ -1001,6 +1025,7 @@ class ImageAnalysisResult {
       externalId: json['external_id'] as String?,
       customerId: json['customer_id'] as String?,
       metadata: json['metadata'] as Map<String, dynamic>?,
+      creditsUsed: json['credits_used'] as int?,
     );
   }
 
@@ -1012,6 +1037,7 @@ class ImageAnalysisResult {
   final String? externalId;
   final String? customerId;
   final Map<String, dynamic>? metadata;
+  final int? creditsUsed;
 }
 
 // =============================================================================

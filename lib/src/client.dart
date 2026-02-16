@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'enums.dart';
 import 'errors.dart';
 import 'models.dart';
+import 'voice_stream.dart';
 
 /// Tuteliq API client for child safety analysis.
 ///
@@ -65,6 +66,14 @@ class Tuteliq {
 
   /// Request ID from the last API call.
   String? lastRequestId;
+
+  /// Create a voice streaming session over WebSocket.
+  VoiceStreamSession voiceStream({
+    VoiceStreamConfig? config,
+    VoiceStreamHandlers? handlers,
+  }) {
+    return VoiceStreamSession(_apiKey, config, handlers);
+  }
 
   /// Closes the HTTP client.
   void close() {
@@ -231,6 +240,12 @@ class Tuteliq {
       recommendedAction = 'none';
     }
 
+    // Sum credits from sub-results when available
+    int? totalCredits;
+    if (bullyingResult?.creditsUsed != null || unsafeResult?.creditsUsed != null) {
+      totalCredits = (bullyingResult?.creditsUsed ?? 0) + (unsafeResult?.creditsUsed ?? 0);
+    }
+
     return AnalyzeResult(
       riskLevel: riskLevel,
       riskScore: maxRiskScore,
@@ -240,6 +255,7 @@ class Tuteliq {
       recommendedAction: recommendedAction,
       externalId: externalId,
       metadata: metadata,
+      creditsUsed: totalCredits,
     );
   }
 

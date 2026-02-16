@@ -185,6 +185,56 @@ print('Risk: ${report.riskLevel.value}');
 print('Next Steps: ${report.recommendedNextSteps}');
 ```
 
+### Voice Streaming
+
+Real-time voice analysis over WebSocket:
+
+```dart
+final session = client.voiceStream(
+  config: VoiceStreamConfig(
+    intervalSeconds: 10,
+    analysisTypes: ['bullying', 'unsafe'],
+  ),
+  handlers: VoiceStreamHandlers(
+    onReady: (e) => print('Session ready: ${e.sessionId}'),
+    onTranscription: (e) => print('Text: ${e.text}'),
+    onAlert: (e) => print('Alert: ${e.category} (${e.severity})'),
+    onSessionSummary: (e) => print('Summary: risk ${e.overallRisk}'),
+  ),
+);
+
+await session.connect();
+
+// Send audio data
+session.sendAudio(audioBytes);
+
+// End session and get summary
+final summary = await session.end();
+
+// Cleanup
+session.close();
+```
+
+### Credits Used
+
+All analysis result types include a `creditsUsed` field that indicates how many API credits were consumed:
+
+```dart
+final result = await client.detectBullying('text to analyze');
+print('Credits used: ${result.creditsUsed}');
+```
+
+| Method | Credits |
+|--------|---------|
+| `detectBullying()` | 1 |
+| `detectUnsafe()` | 1 |
+| `detectGrooming()` | 1 per 10 messages |
+| `analyzeEmotions()` | 1 per 10 messages |
+| `getActionPlan()` | 2 |
+| `generateReport()` | 3 |
+| `analyzeVoice()` | 5 |
+| `analyzeImage()` | 3 |
+
 ---
 
 ## Tracking Fields

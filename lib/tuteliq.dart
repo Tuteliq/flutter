@@ -27,3 +27,4 @@ export 'src/client.dart';
 export 'src/enums.dart';
 export 'src/errors.dart';
 export 'src/models.dart';
+export 'src/voice_stream.dart';
