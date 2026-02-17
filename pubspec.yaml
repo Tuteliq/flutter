@@ -1,6 +1,6 @@
 name: tuteliq
 description: Official Flutter/Dart SDK for Tuteliq - AI-powered child safety API for content moderation, bullying detection, and grooming prevention.
-version: 1.3.0
+version: 2.2.0
 homepage: https://tuteliq.ai
 repository: https://github.com/Tuteliq/flutter
 issue_tracker: https://github.com/Tuteliq/flutter/issues

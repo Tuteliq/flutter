@@ -763,6 +763,312 @@ class Tuteliq {
   }
 
   // ===========================================================================
+  // Fraud Detection
+  // ===========================================================================
+
+  Map<String, dynamic> _buildDetectionBody(DetectionInput input) {
+    final ctx = input.context?.toJson() ?? <String, dynamic>{};
+    ctx['platform'] = _resolvePlatform(ctx['platform'] as String?);
+    final body = <String, dynamic>{'text': input.content, 'context': ctx};
+    if (input.includeEvidence) body['include_evidence'] = true;
+    if (input.externalId != null) body['external_id'] = input.externalId;
+    if (input.customerId != null) body['customer_id'] = input.customerId;
+    if (input.metadata != null) body['metadata'] = input.metadata;
+    return body;
+  }
+
+  /// Detect social engineering attempts.
+  Future<DetectionResult> detectSocialEngineering(
+    String content, {
+    AnalysisContext? context,
+    bool includeEvidence = false,
+    String? externalId,
+    String? customerId,
+    Map<String, dynamic>? metadata,
+  }) async {
+    final data = await _request(
+      '/api/v1/fraud/social-engineering',
+      _buildDetectionBody(DetectionInput(
+        content: content,
+        context: context,
+        includeEvidence: includeEvidence,
+        externalId: externalId,
+        customerId: customerId,
+        metadata: metadata,
+      )),
+    );
+    return DetectionResult.fromJson(data);
+  }
+
+  /// Detect social engineering using input object.
+  Future<DetectionResult> detectSocialEngineeringWithInput(DetectionInput input) async {
+    final data = await _request('/api/v1/fraud/social-engineering', _buildDetectionBody(input));
+    return DetectionResult.fromJson(data);
+  }
+
+  /// Detect app fraud attempts.
+  Future<DetectionResult> detectAppFraud(
+    String content, {
+    AnalysisContext? context,
+    bool includeEvidence = false,
+    String? externalId,
+    String? customerId,
+    Map<String, dynamic>? metadata,
+  }) async {
+    final data = await _request(
+      '/api/v1/fraud/app-fraud',
+      _buildDetectionBody(DetectionInput(
+        content: content,
+        context: context,
+        includeEvidence: includeEvidence,
+        externalId: externalId,
+        customerId: customerId,
+        metadata: metadata,
+      )),
+    );
+    return DetectionResult.fromJson(data);
+  }
+
+  /// Detect app fraud using input object.
+  Future<DetectionResult> detectAppFraudWithInput(DetectionInput input) async {
+    final data = await _request('/api/v1/fraud/app-fraud', _buildDetectionBody(input));
+    return DetectionResult.fromJson(data);
+  }
+
+  /// Detect romance scam attempts.
+  Future<DetectionResult> detectRomanceScam(
+    String content, {
+    AnalysisContext? context,
+    bool includeEvidence = false,
+    String? externalId,
+    String? customerId,
+    Map<String, dynamic>? metadata,
+  }) async {
+    final data = await _request(
+      '/api/v1/fraud/romance-scam',
+      _buildDetectionBody(DetectionInput(
+        content: content,
+        context: context,
+        includeEvidence: includeEvidence,
+        externalId: externalId,
+        customerId: customerId,
+        metadata: metadata,
+      )),
+    );
+    return DetectionResult.fromJson(data);
+  }
+
+  /// Detect romance scam using input object.
+  Future<DetectionResult> detectRomanceScamWithInput(DetectionInput input) async {
+    final data = await _request('/api/v1/fraud/romance-scam', _buildDetectionBody(input));
+    return DetectionResult.fromJson(data);
+  }
+
+  /// Detect mule recruitment attempts.
+  Future<DetectionResult> detectMuleRecruitment(
+    String content, {
+    AnalysisContext? context,
+    bool includeEvidence = false,
+    String? externalId,
+    String? customerId,
+    Map<String, dynamic>? metadata,
+  }) async {
+    final data = await _request(
+      '/api/v1/fraud/mule-recruitment',
+      _buildDetectionBody(DetectionInput(
+        content: content,
+        context: context,
+        includeEvidence: includeEvidence,
+        externalId: externalId,
+        customerId: customerId,
+        metadata: metadata,
+      )),
+    );
+    return DetectionResult.fromJson(data);
+  }
+
+  /// Detect mule recruitment using input object.
+  Future<DetectionResult> detectMuleRecruitmentWithInput(DetectionInput input) async {
+    final data = await _request('/api/v1/fraud/mule-recruitment', _buildDetectionBody(input));
+    return DetectionResult.fromJson(data);
+  }
+
+  // ===========================================================================
+  // Safety Extended
+  // ===========================================================================
+
+  /// Detect gambling harm indicators.
+  Future<DetectionResult> detectGamblingHarm(
+    String content, {
+    AnalysisContext? context,
+    bool includeEvidence = false,
+    String? externalId,
+    String? customerId,
+    Map<String, dynamic>? metadata,
+  }) async {
+    final data = await _request(
+      '/api/v1/safety/gambling-harm',
+      _buildDetectionBody(DetectionInput(
+        content: content,
+        context: context,
+        includeEvidence: includeEvidence,
+        externalId: externalId,
+        customerId: customerId,
+        metadata: metadata,
+      )),
+    );
+    return DetectionResult.fromJson(data);
+  }
+
+  /// Detect gambling harm using input object.
+  Future<DetectionResult> detectGamblingHarmWithInput(DetectionInput input) async {
+    final data = await _request('/api/v1/safety/gambling-harm', _buildDetectionBody(input));
+    return DetectionResult.fromJson(data);
+  }
+
+  /// Detect coercive control patterns.
+  Future<DetectionResult> detectCoerciveControl(
+    String content, {
+    AnalysisContext? context,
+    bool includeEvidence = false,
+    String? externalId,
+    String? customerId,
+    Map<String, dynamic>? metadata,
+  }) async {
+    final data = await _request(
+      '/api/v1/safety/coercive-control',
+      _buildDetectionBody(DetectionInput(
+        content: content,
+        context: context,
+        includeEvidence: includeEvidence,
+        externalId: externalId,
+        customerId: customerId,
+        metadata: metadata,
+      )),
+    );
+    return DetectionResult.fromJson(data);
+  }
+
+  /// Detect coercive control using input object.
+  Future<DetectionResult> detectCoerciveControlWithInput(DetectionInput input) async {
+    final data = await _request('/api/v1/safety/coercive-control', _buildDetectionBody(input));
+    return DetectionResult.fromJson(data);
+  }
+
+  /// Detect vulnerability exploitation.
+  Future<DetectionResult> detectVulnerabilityExploitation(
+    String content, {
+    AnalysisContext? context,
+    bool includeEvidence = false,
+    String? externalId,
+    String? customerId,
+    Map<String, dynamic>? metadata,
+  }) async {
+    final data = await _request(
+      '/api/v1/safety/vulnerability-exploitation',
+      _buildDetectionBody(DetectionInput(
+        content: content,
+        context: context,
+        includeEvidence: includeEvidence,
+        externalId: externalId,
+        customerId: customerId,
+        metadata: metadata,
+      )),
+    );
+    return DetectionResult.fromJson(data);
+  }
+
+  /// Detect vulnerability exploitation using input object.
+  Future<DetectionResult> detectVulnerabilityExploitationWithInput(DetectionInput input) async {
+    final data = await _request('/api/v1/safety/vulnerability-exploitation', _buildDetectionBody(input));
+    return DetectionResult.fromJson(data);
+  }
+
+  /// Detect radicalisation indicators.
+  Future<DetectionResult> detectRadicalisation(
+    String content, {
+    AnalysisContext? context,
+    bool includeEvidence = false,
+    String? externalId,
+    String? customerId,
+    Map<String, dynamic>? metadata,
+  }) async {
+    final data = await _request(
+      '/api/v1/safety/radicalisation',
+      _buildDetectionBody(DetectionInput(
+        content: content,
+        context: context,
+        includeEvidence: includeEvidence,
+        externalId: externalId,
+        customerId: customerId,
+        metadata: metadata,
+      )),
+    );
+    return DetectionResult.fromJson(data);
+  }
+
+  /// Detect radicalisation using input object.
+  Future<DetectionResult> detectRadicalisationWithInput(DetectionInput input) async {
+    final data = await _request('/api/v1/safety/radicalisation', _buildDetectionBody(input));
+    return DetectionResult.fromJson(data);
+  }
+
+  // ===========================================================================
+  // Multi-Endpoint Analysis
+  // ===========================================================================
+
+  /// Run multiple detection endpoints in a single request.
+  Future<AnalyseMultiResult> analyseMulti(AnalyseMultiInput input) async {
+    final ctx = input.context?.toJson() ?? <String, dynamic>{};
+    ctx['platform'] = _resolvePlatform(ctx['platform'] as String?);
+    final body = <String, dynamic>{
+      'text': input.content,
+      'endpoints': input.detections.map((d) => d.value).toList(),
+      'context': ctx,
+    };
+    if (input.includeEvidence) body['options'] = {'include_evidence': true};
+    if (input.externalId != null) body['external_id'] = input.externalId;
+    if (input.customerId != null) body['customer_id'] = input.customerId;
+    if (input.metadata != null) body['metadata'] = input.metadata;
+    final data = await _request('/api/v1/analyse/multi', body);
+    return AnalyseMultiResult.fromJson(data);
+  }
+
+  // ===========================================================================
+  // Video Analysis
+  // ===========================================================================
+
+  /// Analyze video content for safety concerns.
+  Future<VideoAnalysisResult> analyzeVideo({
+    required List<int> file,
+    required String filename,
+    String? fileId,
+    String? externalId,
+    String? customerId,
+    Map<String, dynamic>? metadata,
+    String? ageGroup,
+    String? platform,
+  }) async {
+    final fields = <String, String>{
+      'platform': _resolvePlatform(platform),
+    };
+    if (fileId != null) fields['file_id'] = fileId;
+    if (externalId != null) fields['external_id'] = externalId;
+    if (customerId != null) fields['customer_id'] = customerId;
+    if (metadata != null) fields['metadata'] = jsonEncode(metadata);
+    if (ageGroup != null) fields['age_group'] = ageGroup;
+
+    final data = await _multipartRequest(
+      '/api/v1/safety/video',
+      file: file,
+      filename: filename,
+      fieldName: 'file',
+      fields: fields,
+    );
+    return VideoAnalysisResult.fromJson(data);
+  }
+
+  // ===========================================================================
   // Webhooks
   // ===========================================================================
 

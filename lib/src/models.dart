@@ -201,6 +201,46 @@ class GenerateReportInput {
   final Map<String, dynamic>? metadata;
 }
 
+/// Input for fraud/safety detection endpoints.
+class DetectionInput {
+  const DetectionInput({
+    required this.content,
+    this.context,
+    this.includeEvidence = false,
+    this.externalId,
+    this.customerId,
+    this.metadata,
+  });
+
+  final String content;
+  final AnalysisContext? context;
+  final bool includeEvidence;
+  final String? externalId;
+  final String? customerId;
+  final Map<String, dynamic>? metadata;
+}
+
+/// Input for multi-endpoint analysis.
+class AnalyseMultiInput {
+  const AnalyseMultiInput({
+    required this.content,
+    required this.detections,
+    this.context,
+    this.includeEvidence = false,
+    this.externalId,
+    this.customerId,
+    this.metadata,
+  });
+
+  final String content;
+  final List<Detection> detections;
+  final AnalysisContext? context;
+  final bool includeEvidence;
+  final String? externalId;
+  final String? customerId;
+  final Map<String, dynamic>? metadata;
+}
+
 // =============================================================================
 // Result Types
 // =============================================================================
@@ -218,6 +258,8 @@ class BullyingResult {
     this.externalId,
     this.metadata,
     this.creditsUsed,
+    this.language,
+    this.languageStatus,
   });
 
   factory BullyingResult.fromJson(Map<String, dynamic> json) {
@@ -232,6 +274,8 @@ class BullyingResult {
       externalId: json['external_id'] as String?,
       metadata: json['metadata'] as Map<String, dynamic>?,
       creditsUsed: json['credits_used'] as int?,
+      language: json['language'] as String?,
+      languageStatus: json['language_status'] as String?,
     );
   }
 
@@ -245,6 +289,8 @@ class BullyingResult {
   final String? externalId;
   final Map<String, dynamic>? metadata;
   final int? creditsUsed;
+  final String? language;
+  final String? languageStatus;
 }
 
 /// Result of grooming detection.
@@ -259,6 +305,8 @@ class GroomingResult {
     this.externalId,
     this.metadata,
     this.creditsUsed,
+    this.language,
+    this.languageStatus,
   });
 
   factory GroomingResult.fromJson(Map<String, dynamic> json) {
@@ -272,6 +320,8 @@ class GroomingResult {
       externalId: json['external_id'] as String?,
       metadata: json['metadata'] as Map<String, dynamic>?,
       creditsUsed: json['credits_used'] as int?,
+      language: json['language'] as String?,
+      languageStatus: json['language_status'] as String?,
     );
   }
 
@@ -284,6 +334,8 @@ class GroomingResult {
   final String? externalId;
   final Map<String, dynamic>? metadata;
   final int? creditsUsed;
+  final String? language;
+  final String? languageStatus;
 }
 
 /// Result of unsafe content detection.
@@ -299,6 +351,8 @@ class UnsafeResult {
     this.externalId,
     this.metadata,
     this.creditsUsed,
+    this.language,
+    this.languageStatus,
   });
 
   factory UnsafeResult.fromJson(Map<String, dynamic> json) {
@@ -313,6 +367,8 @@ class UnsafeResult {
       externalId: json['external_id'] as String?,
       metadata: json['metadata'] as Map<String, dynamic>?,
       creditsUsed: json['credits_used'] as int?,
+      language: json['language'] as String?,
+      languageStatus: json['language_status'] as String?,
     );
   }
 
@@ -326,6 +382,8 @@ class UnsafeResult {
   final String? externalId;
   final Map<String, dynamic>? metadata;
   final int? creditsUsed;
+  final String? language;
+  final String? languageStatus;
 }
 
 /// Result of quick analysis.
@@ -1038,6 +1096,280 @@ class ImageAnalysisResult {
   final String? customerId;
   final Map<String, dynamic>? metadata;
   final int? creditsUsed;
+}
+
+// =============================================================================
+// Detection Results (Fraud & Safety Extended)
+// =============================================================================
+
+/// A detection category with confidence score.
+class DetectionCategory {
+  const DetectionCategory({
+    required this.tag,
+    required this.label,
+    required this.confidence,
+  });
+
+  factory DetectionCategory.fromJson(Map<String, dynamic> json) {
+    return DetectionCategory(
+      tag: json['tag'] as String,
+      label: json['label'] as String,
+      confidence: (json['confidence'] as num).toDouble(),
+    );
+  }
+
+  final String tag;
+  final String label;
+  final double confidence;
+}
+
+/// Evidence item from detection analysis.
+class DetectionEvidence {
+  const DetectionEvidence({
+    required this.text,
+    required this.tactic,
+    required this.weight,
+  });
+
+  factory DetectionEvidence.fromJson(Map<String, dynamic> json) {
+    return DetectionEvidence(
+      text: json['text'] as String,
+      tactic: json['tactic'] as String,
+      weight: (json['weight'] as num).toDouble(),
+    );
+  }
+
+  final String text;
+  final String tactic;
+  final double weight;
+}
+
+/// Age calibration information.
+class AgeCalibration {
+  const AgeCalibration({
+    required this.applied,
+    this.ageGroup,
+    this.multiplier,
+  });
+
+  factory AgeCalibration.fromJson(Map<String, dynamic> json) {
+    return AgeCalibration(
+      applied: json['applied'] as bool,
+      ageGroup: json['age_group'] as String?,
+      multiplier: (json['multiplier'] as num?)?.toDouble(),
+    );
+  }
+
+  final bool applied;
+  final String? ageGroup;
+  final double? multiplier;
+}
+
+/// Result from a detection endpoint (fraud or safety extended).
+class DetectionResult {
+  const DetectionResult({
+    required this.endpoint,
+    required this.detected,
+    required this.severity,
+    required this.confidence,
+    required this.riskScore,
+    required this.level,
+    required this.categories,
+    required this.recommendedAction,
+    required this.rationale,
+    required this.language,
+    required this.languageStatus,
+    this.evidence,
+    this.ageCalibration,
+    this.creditsUsed,
+    this.processingTimeMs,
+    this.externalId,
+    this.customerId,
+    this.metadata,
+  });
+
+  factory DetectionResult.fromJson(Map<String, dynamic> json) {
+    return DetectionResult(
+      endpoint: json['endpoint'] as String,
+      detected: json['detected'] as bool,
+      severity: (json['severity'] as num).toDouble(),
+      confidence: (json['confidence'] as num).toDouble(),
+      riskScore: (json['risk_score'] as num).toDouble(),
+      level: json['level'] as String,
+      categories: (json['categories'] as List)
+          .map((e) => DetectionCategory.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      recommendedAction: json['recommended_action'] as String,
+      rationale: json['rationale'] as String,
+      language: json['language'] as String,
+      languageStatus: json['language_status'] as String,
+      evidence: (json['evidence'] as List?)
+          ?.map((e) => DetectionEvidence.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      ageCalibration: json['age_calibration'] != null
+          ? AgeCalibration.fromJson(json['age_calibration'] as Map<String, dynamic>)
+          : null,
+      creditsUsed: json['credits_used'] as int?,
+      processingTimeMs: (json['processing_time_ms'] as num?)?.toDouble(),
+      externalId: json['external_id'] as String?,
+      customerId: json['customer_id'] as String?,
+      metadata: json['metadata'] as Map<String, dynamic>?,
+    );
+  }
+
+  final String endpoint;
+  final bool detected;
+  final double severity;
+  final double confidence;
+  final double riskScore;
+  final String level;
+  final List<DetectionCategory> categories;
+  final String recommendedAction;
+  final String rationale;
+  final String language;
+  final String languageStatus;
+  final List<DetectionEvidence>? evidence;
+  final AgeCalibration? ageCalibration;
+  final int? creditsUsed;
+  final double? processingTimeMs;
+  final String? externalId;
+  final String? customerId;
+  final Map<String, dynamic>? metadata;
+}
+
+// =============================================================================
+// Multi-Endpoint Analysis
+// =============================================================================
+
+/// Summary of multi-endpoint analysis.
+class AnalyseMultiSummary {
+  const AnalyseMultiSummary({
+    required this.totalEndpoints,
+    required this.detectedCount,
+    required this.highestRisk,
+    required this.overallRiskLevel,
+  });
+
+  factory AnalyseMultiSummary.fromJson(Map<String, dynamic> json) {
+    return AnalyseMultiSummary(
+      totalEndpoints: json['total_endpoints'] as int,
+      detectedCount: json['detected_count'] as int,
+      highestRisk: json['highest_risk'] as Map<String, dynamic>,
+      overallRiskLevel: json['overall_risk_level'] as String,
+    );
+  }
+
+  final int totalEndpoints;
+  final int detectedCount;
+  final Map<String, dynamic> highestRisk;
+  final String overallRiskLevel;
+}
+
+/// Result of multi-endpoint analysis.
+class AnalyseMultiResult {
+  const AnalyseMultiResult({
+    required this.results,
+    required this.summary,
+    this.crossEndpointModifier,
+    this.creditsUsed,
+    this.externalId,
+    this.customerId,
+    this.metadata,
+  });
+
+  factory AnalyseMultiResult.fromJson(Map<String, dynamic> json) {
+    return AnalyseMultiResult(
+      results: (json['results'] as List)
+          .map((e) => DetectionResult.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      summary: AnalyseMultiSummary.fromJson(json['summary'] as Map<String, dynamic>),
+      crossEndpointModifier: (json['cross_endpoint_modifier'] as num?)?.toDouble(),
+      creditsUsed: json['credits_used'] as int?,
+      externalId: json['external_id'] as String?,
+      customerId: json['customer_id'] as String?,
+      metadata: json['metadata'] as Map<String, dynamic>?,
+    );
+  }
+
+  final List<DetectionResult> results;
+  final AnalyseMultiSummary summary;
+  final double? crossEndpointModifier;
+  final int? creditsUsed;
+  final String? externalId;
+  final String? customerId;
+  final Map<String, dynamic>? metadata;
+}
+
+// =============================================================================
+// Video Analysis
+// =============================================================================
+
+/// A safety finding from video analysis.
+class VideoSafetyFinding {
+  const VideoSafetyFinding({
+    required this.frameIndex,
+    required this.timestamp,
+    required this.description,
+    required this.categories,
+    required this.severity,
+  });
+
+  factory VideoSafetyFinding.fromJson(Map<String, dynamic> json) {
+    return VideoSafetyFinding(
+      frameIndex: json['frame_index'] as int,
+      timestamp: (json['timestamp'] as num).toDouble(),
+      description: json['description'] as String,
+      categories: (json['categories'] as List).cast<String>(),
+      severity: (json['severity'] as num).toDouble(),
+    );
+  }
+
+  final int frameIndex;
+  final double timestamp;
+  final String description;
+  final List<String> categories;
+  final double severity;
+}
+
+/// Result of video safety analysis.
+class VideoAnalysisResult {
+  const VideoAnalysisResult({
+    this.fileId,
+    required this.framesAnalyzed,
+    required this.safetyFindings,
+    required this.overallRiskScore,
+    required this.overallSeverity,
+    this.creditsUsed,
+    this.externalId,
+    this.customerId,
+    this.metadata,
+  });
+
+  factory VideoAnalysisResult.fromJson(Map<String, dynamic> json) {
+    return VideoAnalysisResult(
+      fileId: json['file_id'] as String?,
+      framesAnalyzed: json['frames_analyzed'] as int,
+      safetyFindings: (json['safety_findings'] as List)
+          .map((e) => VideoSafetyFinding.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      overallRiskScore: (json['overall_risk_score'] as num).toDouble(),
+      overallSeverity: json['overall_severity'] as String,
+      creditsUsed: json['credits_used'] as int?,
+      externalId: json['external_id'] as String?,
+      customerId: json['customer_id'] as String?,
+      metadata: json['metadata'] as Map<String, dynamic>?,
+    );
+  }
+
+  final String? fileId;
+  final int framesAnalyzed;
+  final List<VideoSafetyFinding> safetyFindings;
+  final double overallRiskScore;
+  final String overallSeverity;
+  final int? creditsUsed;
+  final String? externalId;
+  final String? customerId;
+  final Map<String, dynamic>? metadata;
 }
 
 // =============================================================================
