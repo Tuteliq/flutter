@@ -4,7 +4,7 @@ version: 2.2.0
 homepage: https://tuteliq.ai
 repository: https://github.com/Tuteliq/flutter
 issue_tracker: https://github.com/Tuteliq/flutter/issues
-documentation: https://api.tuteliq.ai/docs
+documentation: https://docs.tuteliq.ai
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
