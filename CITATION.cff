@@ -1,0 +1,22 @@
+cff-version: 1.2.0
+title: Tuteliq Flutter SDK
+message: "If you use this software, please cite it using this metadata."
+type: software
+authors:
+  - name: Tuteliq
+    website: https://tuteliq.ai
+repository-code: https://github.com/Tuteliq/flutter
+url: https://tuteliq.ai
+abstract: >-
+  Official Flutter/Dart SDK for Tuteliq — AI-powered child safety API for cross-platform mobile apps
+keywords:
+  - child safety
+  - Flutter
+  - Dart
+  - content moderation
+  - KOSA
+  - SDK
+  - mobile
+  - cross-platform
+  - online safety
+license: MIT
