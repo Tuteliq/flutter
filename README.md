@@ -186,6 +186,41 @@ print('Risk: ${report.riskLevel.value}');
 print('Next Steps: ${report.recommendedNextSteps}');
 ```
 
+### Age Verification (Beta)
+
+> **Pro tier ($99/mo)+ required** — 5 credits per request — `POST /v1/verification/age`
+
+```dart
+final ageResult = await client.verifyAge(
+  document: File('id-front.jpg'),
+  selfie: File('selfie.jpg'),
+  method: VerificationMethod.combined, // .document | .biometric | .combined
+);
+
+print(ageResult.verified);       // true
+print(ageResult.estimatedAge);   // 15
+print(ageResult.ageRange);       // "13-15"
+print(ageResult.isMinor);        // true
+print(ageResult.confidence);     // 0.97
+```
+
+### Identity Verification (Beta)
+
+> **Business tier ($349/mo)+ required** — 10 credits per request — `POST /v1/verification/identity`
+
+```dart
+final identityResult = await client.verifyIdentity(
+  document: File('id-front.jpg'),
+  selfie: File('selfie.jpg'),
+);
+
+print(identityResult.verified);               // true
+print(identityResult.matchScore);             // 0.98
+print(identityResult.livenessPassed);         // true
+print(identityResult.documentAuthenticated);  // true
+print(identityResult.isMinor);               // false
+```
+
 ### Voice Streaming
 
 Real-time voice analysis over WebSocket:
@@ -235,6 +270,8 @@ print('Credits used: ${result.creditsUsed}');
 | `generateReport()` | 3 |
 | `analyzeVoice()` | 5 |
 | `analyzeImage()` | 3 |
+| `verifyAge()` | 5 |
+| `verifyIdentity()` | 10 |
 
 ---
 

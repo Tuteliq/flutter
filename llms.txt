@@ -1,0 +1,31 @@
+# Tuteliq Flutter SDK
+
+> Official Flutter/Dart SDK for Tuteliq — AI-powered child safety API for cross-platform mobile apps.
+
+## What is this?
+A Flutter/Dart package for the Tuteliq child safety API. Detect bullying, grooming, self-harm, and other harmful content in text, conversations, and media. Works on iOS, Android, web, and desktop.
+
+## Install
+# pubspec.yaml
+dependencies:
+  tuteliq: ^1.0.0
+
+## Quick Start
+import 'package:tuteliq/tuteliq.dart';
+final client = Tuteliq(apiKey: const String.fromEnvironment('TUTELIQ_API_KEY'));
+final result = await client.detectUnsafe(text: 'content to check', ageGroup: '13-15');
+
+## Key Features
+- Cross-platform (iOS, Android, web, desktop)
+- All 20+ Tuteliq API endpoints
+- 16+ detection categories (KOSA compliant)
+- Age group calibration
+- Dart-idiomatic async API
+- Age Verification (Beta) — POST /v1/verification/age — Pro tier ($99/mo)+, 5 credits
+- Identity Verification (Beta) — POST /v1/verification/identity — Business tier ($349/mo)+, 10 credits
+
+## Links
+- Website: https://tuteliq.ai
+- Documentation: https://docs.tuteliq.ai
+- pub.dev: https://pub.dev/packages/tuteliq
+- GitHub: https://github.com/Tuteliq/flutter
