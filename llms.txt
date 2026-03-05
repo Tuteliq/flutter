@@ -21,6 +21,8 @@ final result = await client.detectUnsafe(text: 'content to check', ageGroup: '13
 - 16+ detection categories (KOSA compliant)
 - Age group calibration
 - Dart-idiomatic async API
+- Age Verification (Beta) — POST /v1/verification/age — Pro tier ($99/mo)+, 5 credits
+- Identity Verification (Beta) — POST /v1/verification/identity — Business tier ($349/mo)+, 10 credits
 
 ## Links
 - Website: https://tuteliq.ai
