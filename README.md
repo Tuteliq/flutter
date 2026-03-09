@@ -116,6 +116,13 @@ final result = await client.detectGrooming(
 if (result.groomingRisk == GroomingRisk.high) {
   print('Flags: ${result.flags}');  // [secrecy, isolation]
 }
+
+// Per-message breakdown (optional, returned on conversation-aware endpoints)
+if (result.messageAnalysis != null) {
+  for (final m in result.messageAnalysis!) {
+    print('Message ${m.messageIndex}: risk=${m.riskScore}, flags=${m.flags}, summary=${m.summary}');
+  }
+}
 ```
 
 ### Unsafe Content Detection
