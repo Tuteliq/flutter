@@ -22,6 +22,9 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Audit dependencies
+        run: dart pub outdated --dependency-overrides || true
+
       - name: Analyze
         run: flutter analyze
 
