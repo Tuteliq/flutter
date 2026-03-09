@@ -302,6 +302,7 @@ class GroomingResult {
     required this.rationale,
     required this.riskScore,
     required this.recommendedAction,
+    this.messageAnalysis,
     this.externalId,
     this.metadata,
     this.creditsUsed,
@@ -317,6 +318,9 @@ class GroomingResult {
       rationale: json['rationale'] as String,
       riskScore: (json['risk_score'] as num).toDouble(),
       recommendedAction: json['recommended_action'] as String,
+      messageAnalysis: (json['message_analysis'] as List?)
+          ?.map((e) => MessageAnalysis.fromJson(e as Map<String, dynamic>))
+          .toList(),
       externalId: json['external_id'] as String?,
       metadata: json['metadata'] as Map<String, dynamic>?,
       creditsUsed: json['credits_used'] as int?,
@@ -331,6 +335,7 @@ class GroomingResult {
   final String rationale;
   final double riskScore;
   final String recommendedAction;
+  final List<MessageAnalysis>? messageAnalysis;
   final String? externalId;
   final Map<String, dynamic>? metadata;
   final int? creditsUsed;
@@ -1102,6 +1107,30 @@ class ImageAnalysisResult {
 // Detection Results (Fraud & Safety Extended)
 // =============================================================================
 
+/// Per-message analysis from conversation-aware detection.
+class MessageAnalysis {
+  const MessageAnalysis({
+    required this.messageIndex,
+    required this.riskScore,
+    required this.flags,
+    required this.summary,
+  });
+
+  factory MessageAnalysis.fromJson(Map<String, dynamic> json) {
+    return MessageAnalysis(
+      messageIndex: json['message_index'] as int,
+      riskScore: (json['risk_score'] as num).toDouble(),
+      flags: List<String>.from(json['flags'] as List),
+      summary: json['summary'] as String,
+    );
+  }
+
+  final int messageIndex;
+  final double riskScore;
+  final List<String> flags;
+  final String summary;
+}
+
 /// A detection category with confidence score.
 class DetectionCategory {
   const DetectionCategory({
@@ -1181,6 +1210,7 @@ class DetectionResult {
     required this.languageStatus,
     this.evidence,
     this.ageCalibration,
+    this.messageAnalysis,
     this.creditsUsed,
     this.processingTimeMs,
     this.externalId,
@@ -1209,6 +1239,9 @@ class DetectionResult {
       ageCalibration: json['age_calibration'] != null
           ? AgeCalibration.fromJson(json['age_calibration'] as Map<String, dynamic>)
           : null,
+      messageAnalysis: (json['message_analysis'] as List?)
+          ?.map((e) => MessageAnalysis.fromJson(e as Map<String, dynamic>))
+          .toList(),
       creditsUsed: json['credits_used'] as int?,
       processingTimeMs: (json['processing_time_ms'] as num?)?.toDouble(),
       externalId: json['external_id'] as String?,
@@ -1230,6 +1263,7 @@ class DetectionResult {
   final String languageStatus;
   final List<DetectionEvidence>? evidence;
   final AgeCalibration? ageCalibration;
+  final List<MessageAnalysis>? messageAnalysis;
   final int? creditsUsed;
   final double? processingTimeMs;
   final String? externalId;
