@@ -1069,6 +1069,52 @@ class Tuteliq {
   }
 
   // ===========================================================================
+  // Document Analysis
+  // ===========================================================================
+
+  /// Analyze a PDF document for safety concerns across multiple endpoints.
+  ///
+  /// Uploads a PDF file and runs the specified detection endpoints on each page.
+  /// Valid endpoints: unsafe, bullying, grooming, social-engineering,
+  /// coercive-control, radicalisation, romance-scam, mule-recruitment.
+  Future<DocumentAnalysisResult> analyzeDocument({
+    required List<int> file,
+    required String filename,
+    List<String>? endpoints,
+    String? fileId,
+    String? externalId,
+    String? customerId,
+    Map<String, dynamic>? metadata,
+    String? ageGroup,
+    String? language,
+    String? platform,
+    String? supportThreshold,
+  }) async {
+    final fields = <String, String>{
+      'platform': _resolvePlatform(platform),
+    };
+    if (endpoints != null) fields['endpoints'] = jsonEncode(endpoints);
+    if (fileId != null) fields['file_id'] = fileId;
+    if (externalId != null) fields['external_id'] = externalId;
+    if (customerId != null) fields['customer_id'] = customerId;
+    if (metadata != null) fields['metadata'] = jsonEncode(metadata);
+    if (ageGroup != null) fields['age_group'] = ageGroup;
+    if (language != null) fields['language'] = language;
+    if (supportThreshold != null) {
+      fields['support_threshold'] = supportThreshold;
+    }
+
+    final data = await _multipartRequest(
+      '/api/v1/safety/document',
+      file: file,
+      filename: filename,
+      fieldName: 'file',
+      fields: fields,
+    );
+    return DocumentAnalysisResult.fromJson(data);
+  }
+
+  // ===========================================================================
   // Webhooks
   // ===========================================================================
 
