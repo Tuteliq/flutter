@@ -1703,3 +1703,210 @@ class UsageMonthlyResult {
   final Map<String, dynamic>? recommendations;
   final Map<String, dynamic> links;
 }
+
+// =============================================================================
+// Document Analysis
+// =============================================================================
+
+/// Breakdown of how text was extracted from the document.
+class DocumentExtractionSummary {
+  const DocumentExtractionSummary({
+    required this.textLayerPages,
+    required this.ocrPages,
+    required this.failedPages,
+    required this.averageOcrConfidence,
+  });
+
+  factory DocumentExtractionSummary.fromJson(Map<String, dynamic> json) {
+    return DocumentExtractionSummary(
+      textLayerPages: json['text_layer_pages'] as int,
+      ocrPages: json['ocr_pages'] as int,
+      failedPages: json['failed_pages'] as int,
+      averageOcrConfidence: (json['average_ocr_confidence'] as num).toDouble(),
+    );
+  }
+
+  final int textLayerPages;
+  final int ocrPages;
+  final int failedPages;
+  final double averageOcrConfidence;
+}
+
+/// Detection result for a single endpoint on a single page.
+class DocumentPageEndpointResult {
+  const DocumentPageEndpointResult({
+    required this.endpoint,
+    required this.detected,
+    required this.severity,
+    required this.confidence,
+    required this.riskScore,
+    required this.level,
+    required this.categories,
+    required this.evidence,
+    required this.recommendedAction,
+    required this.rationale,
+    this.detectedLanguage,
+  });
+
+  factory DocumentPageEndpointResult.fromJson(Map<String, dynamic> json) {
+    return DocumentPageEndpointResult(
+      endpoint: json['endpoint'] as String,
+      detected: json['detected'] as bool,
+      severity: (json['severity'] as num).toDouble(),
+      confidence: (json['confidence'] as num).toDouble(),
+      riskScore: (json['risk_score'] as num).toDouble(),
+      level: json['level'] as String,
+      categories: (json['categories'] as List)
+          .map((e) => DetectionCategory.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      evidence: (json['evidence'] as List)
+          .map((e) => DetectionEvidence.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      recommendedAction: json['recommended_action'] as String,
+      rationale: json['rationale'] as String,
+      detectedLanguage: json['detected_language'] as String?,
+    );
+  }
+
+  final String endpoint;
+  final bool detected;
+  final double severity;
+  final double confidence;
+  final double riskScore;
+  final String level;
+  final List<DetectionCategory> categories;
+  final List<DetectionEvidence> evidence;
+  final String recommendedAction;
+  final String rationale;
+  final String? detectedLanguage;
+}
+
+/// Detection results for a single page.
+class DocumentPageResult {
+  const DocumentPageResult({
+    required this.pageNumber,
+    required this.textPreview,
+    required this.extractionMethod,
+    this.ocrConfidence,
+    required this.results,
+    required this.pageRiskScore,
+    required this.pageSeverity,
+  });
+
+  factory DocumentPageResult.fromJson(Map<String, dynamic> json) {
+    return DocumentPageResult(
+      pageNumber: json['page_number'] as int,
+      textPreview: json['text_preview'] as String,
+      extractionMethod: json['extraction_method'] as String,
+      ocrConfidence: (json['ocr_confidence'] as num?)?.toDouble(),
+      results: (json['results'] as List)
+          .map((e) => DocumentPageEndpointResult.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      pageRiskScore: (json['page_risk_score'] as num).toDouble(),
+      pageSeverity: json['page_severity'] as String,
+    );
+  }
+
+  final int pageNumber;
+  final String textPreview;
+  final String extractionMethod;
+  final double? ocrConfidence;
+  final List<DocumentPageEndpointResult> results;
+  final double pageRiskScore;
+  final String pageSeverity;
+}
+
+/// A page flagged with risk score >= 0.3.
+class DocumentFlaggedPage {
+  const DocumentFlaggedPage({
+    required this.pageNumber,
+    required this.riskScore,
+    required this.severity,
+    required this.detectedEndpoints,
+  });
+
+  factory DocumentFlaggedPage.fromJson(Map<String, dynamic> json) {
+    return DocumentFlaggedPage(
+      pageNumber: json['page_number'] as int,
+      riskScore: (json['risk_score'] as num).toDouble(),
+      severity: json['severity'] as String,
+      detectedEndpoints: (json['detected_endpoints'] as List).cast<String>(),
+    );
+  }
+
+  final int pageNumber;
+  final double riskScore;
+  final String severity;
+  final List<String> detectedEndpoints;
+}
+
+/// Result of document (PDF) safety analysis.
+class DocumentAnalysisResult {
+  const DocumentAnalysisResult({
+    this.fileId,
+    required this.documentHash,
+    required this.totalPages,
+    required this.pagesAnalyzed,
+    required this.extractionSummary,
+    required this.pageResults,
+    required this.overallRiskScore,
+    required this.overallSeverity,
+    required this.detectedEndpoints,
+    required this.flaggedPages,
+    required this.creditsUsed,
+    required this.processingTimeMs,
+    this.language,
+    this.languageStatus,
+    this.support,
+    this.externalId,
+    this.customerId,
+    this.metadata,
+  });
+
+  factory DocumentAnalysisResult.fromJson(Map<String, dynamic> json) {
+    return DocumentAnalysisResult(
+      fileId: json['file_id'] as String?,
+      documentHash: json['document_hash'] as String,
+      totalPages: json['total_pages'] as int,
+      pagesAnalyzed: json['pages_analyzed'] as int,
+      extractionSummary: DocumentExtractionSummary.fromJson(
+          json['extraction_summary'] as Map<String, dynamic>),
+      pageResults: (json['page_results'] as List)
+          .map((e) => DocumentPageResult.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      overallRiskScore: (json['overall_risk_score'] as num).toDouble(),
+      overallSeverity: json['overall_severity'] as String,
+      detectedEndpoints: (json['detected_endpoints'] as List).cast<String>(),
+      flaggedPages: (json['flagged_pages'] as List)
+          .map((e) => DocumentFlaggedPage.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      creditsUsed: json['credits_used'] as int,
+      processingTimeMs: json['processing_time_ms'] as int,
+      language: json['language'] as String?,
+      languageStatus: json['language_status'] as String?,
+      support: json['support'] as Map<String, dynamic>?,
+      externalId: json['external_id'] as String?,
+      customerId: json['customer_id'] as String?,
+      metadata: json['metadata'] as Map<String, dynamic>?,
+    );
+  }
+
+  final String? fileId;
+  final String documentHash;
+  final int totalPages;
+  final int pagesAnalyzed;
+  final DocumentExtractionSummary extractionSummary;
+  final List<DocumentPageResult> pageResults;
+  final double overallRiskScore;
+  final String overallSeverity;
+  final List<String> detectedEndpoints;
+  final List<DocumentFlaggedPage> flaggedPages;
+  final int creditsUsed;
+  final int processingTimeMs;
+  final String? language;
+  final String? languageStatus;
+  final Map<String, dynamic>? support;
+  final String? externalId;
+  final String? customerId;
+  final Map<String, dynamic>? metadata;
+}

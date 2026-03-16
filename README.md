@@ -251,6 +251,36 @@ final summary = await session.end();
 session.close();
 ```
 
+### Document Analysis
+
+Analyze PDF documents for safety concerns across multiple detection endpoints. Each page is processed independently with text extraction (native text layer or OCR fallback).
+
+```dart
+import 'dart:io';
+
+final pdfBytes = await File('report.pdf').readAsBytes();
+
+final result = await client.analyzeDocument(
+  file: pdfBytes,
+  filename: 'report.pdf',
+  endpoints: ['unsafe', 'bullying', 'coercive-control'],
+  ageGroup: 'teen',
+  language: 'en',
+  supportThreshold: 'high',
+);
+
+print('Pages analyzed: ${result.pagesAnalyzed}/${result.totalPages}');
+print('Overall risk: ${result.overallSeverity} (${result.overallRiskScore})');
+print('Flagged pages: ${result.flaggedPages.length}');
+print('Credits used: ${result.creditsUsed}');
+
+for (final page in result.flaggedPages) {
+  print('Page ${page.pageNumber}: ${page.severity} — ${page.detectedEndpoints}');
+}
+```
+
+Valid endpoints: `unsafe`, `bullying`, `grooming`, `social-engineering`, `coercive-control`, `radicalisation`, `romance-scam`, `mule-recruitment`.
+
 ### Credits Used
 
 All analysis result types include a `creditsUsed` field that indicates how many API credits were consumed:
@@ -270,6 +300,7 @@ print('Credits used: ${result.creditsUsed}');
 | `generateReport()` | 3 |
 | `analyzeVoice()` | 5 |
 | `analyzeImage()` | 3 |
+| `analyzeDocument()` | dynamic (pages x endpoints) |
 | `verifyAge()` | 5 |
 | `verifyIdentity()` | 10 |
 
