@@ -1,3 +1,15 @@
+## 2.2.1
+
+Changes since 1.3.0, summarized from commit history:
+
+### Added
+- Fraud detection, extended safety detection, multi-endpoint analysis (`analyseMulti`), and video analysis support
+- GDPR account management methods (Article 17 erasure, Article 20 portability)
+- Voice and image analysis, webhooks, pricing, and usage endpoints
+
+### Changed
+- Usage headers updated to `X-Monthly-*` format
+
 ## 1.3.0
 
 ### Added
