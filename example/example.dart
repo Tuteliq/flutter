@@ -1,3 +1,6 @@
+// ignore_for_file: avoid_print
+// Printing is the point of this example script; the lint is meant for
+// application code, not a documentation sample.
 import 'package:tuteliq/tuteliq.dart';
 
 void main() async {
@@ -24,7 +27,7 @@ void main() async {
 
     // Grooming detection
     final grooming = await client.detectGrooming(
-      DetectGroomingInput(
+      const DetectGroomingInput(
         messages: [
           const GroomingMessage(
             role: MessageRole.adult,
