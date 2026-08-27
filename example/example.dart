@@ -29,11 +29,11 @@ void main() async {
     final grooming = await client.detectGrooming(
       const DetectGroomingInput(
         messages: [
-          const GroomingMessage(
+          GroomingMessage(
             role: MessageRole.adult,
             content: 'This is our secret',
           ),
-          const GroomingMessage(
+          GroomingMessage(
             role: MessageRole.child,
             content: 'Ok I wont tell',
           ),
