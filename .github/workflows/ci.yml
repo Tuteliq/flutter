@@ -49,3 +49,19 @@ jobs:
 
       - name: Dry run publish
         run: flutter pub publish --dry-run
+
+  osv-scan:
+    # CodeQL does not support Dart, so vulnerability scanning for this repo
+    # runs via OSV-Scanner instead (auto-detects pubspec.lock). This uses
+    # Google's reusable workflow, not a step-level action, per the action's
+    # documented usage (google.github.io/osv-scanner/github-action/).
+    permissions:
+      actions: read
+      security-events: write
+      contents: read
+    uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@v2.5.1
+    continue-on-error: true # first run, unknown baseline; tighten once confirmed clean
+    with:
+      scan-args: |-
+        --recursive
+        ./
