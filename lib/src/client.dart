@@ -35,17 +35,21 @@ class Tuteliq {
   /// [maxRetries] is the number of retry attempts for transient failures.
   /// [retryDelay] is the initial retry delay.
   /// [baseUrl] is the API base URL (default: https://api.tuteliq.ai).
+  /// [httpClient] replaces the underlying HTTP client, for example to add
+  /// logging or to stub the API in tests.
   Tuteliq({
     required String apiKey,
     Duration timeout = const Duration(seconds: 30),
     int maxRetries = 3,
     Duration retryDelay = const Duration(seconds: 1),
     String baseUrl = 'https://api.tuteliq.ai',
+    http.Client? httpClient,
   })  : _apiKey = apiKey,
         _timeout = timeout,
         _maxRetries = maxRetries,
         _retryDelay = retryDelay,
-        _baseUrl = baseUrl {
+        _baseUrl = baseUrl,
+        _client = httpClient ?? http.Client() {
     if (apiKey.isEmpty) {
       throw ArgumentError('API key is required');
     }
@@ -59,7 +63,7 @@ class Tuteliq {
   final int _maxRetries;
   final Duration _retryDelay;
   final String _baseUrl;
-  final http.Client _client = http.Client();
+  final http.Client _client;
 
   /// Current usage statistics (updated after each request).
   Usage? usage;
@@ -658,7 +662,7 @@ class Tuteliq {
 
     final http.StreamedResponse streamedResponse;
     try {
-      streamedResponse = await request.send().timeout(_timeout);
+      streamedResponse = await _client.send(request).timeout(_timeout);
     } on TimeoutException {
       throw TimeoutException('Request timed out after ${_timeout.inSeconds}s');
     } catch (e) {

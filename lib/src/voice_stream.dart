@@ -175,27 +175,39 @@ class VoiceStreamHandlers {
   });
 }
 
+/// Opens a WebSocket channel. Replaceable so the connection can be stubbed.
+typedef WebSocketConnector = WebSocketChannel Function(
+  Uri uri,
+  Iterable<String>? protocols,
+);
+
+WebSocketChannel _defaultConnector(Uri uri, Iterable<String>? protocols) =>
+    WebSocketChannel.connect(uri, protocols: protocols);
+
 class VoiceStreamSession {
   final String _apiKey;
   final VoiceStreamConfig? _config;
   final VoiceStreamHandlers? _handlers;
+  final WebSocketConnector _connector;
   WebSocketChannel? _channel;
   String? _sessionId;
   bool _active = false;
   final Completer<VoiceSessionSummaryEvent> _summaryCompleter = Completer<VoiceSessionSummaryEvent>();
   StreamSubscription? _subscription;
 
-  VoiceStreamSession(this._apiKey, this._config, this._handlers);
+  VoiceStreamSession(
+    this._apiKey,
+    this._config,
+    this._handlers, {
+    WebSocketConnector? connector,
+  }) : _connector = connector ?? _defaultConnector;
 
   String? get sessionId => _sessionId;
   bool get isActive => _active;
 
   Future<void> connect() async {
     final uri = Uri.parse(_voiceStreamUrl);
-    _channel = WebSocketChannel.connect(
-      uri,
-      protocols: null,
-    );
+    _channel = _connector(uri, null);
 
     // Note: WebSocketChannel.connect doesn't support custom headers directly.
     // The API key is sent as the first message after connection.
