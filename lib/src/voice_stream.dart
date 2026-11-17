@@ -3,12 +3,33 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
-const String _voiceStreamUrl = 'wss://api.tuteliq.ai/voice/stream';
+const String _voiceStreamPath = '/api/v1/safety/voice/stream';
+
+/// The voice stream WebSocket URL for an API base URL.
+Uri voiceStreamUri([String baseUrl = 'https://api.tuteliq.ai']) {
+  final base = Uri.parse(baseUrl);
+  final scheme = base.scheme == 'http' || base.scheme == 'ws' ? 'ws' : 'wss';
+  final basePath = base.path.endsWith('/')
+      ? base.path.substring(0, base.path.length - 1)
+      : base.path;
+  return base.replace(scheme: scheme, path: '$basePath$_voiceStreamPath');
+}
+
+/// The WebSocket subprotocols that authenticate a voice stream.
+///
+/// The API reads the key from the `tuteliq.apikey.<key>` subprotocol at the
+/// handshake and answers with `tuteliq`, so the key never travels in the URL
+/// and works on every platform, including the web.
+List<String> voiceStreamProtocols(String apiKey) =>
+    ['tuteliq', 'tuteliq.apikey.$apiKey'];
 
 class VoiceStreamConfig {
   final int? intervalSeconds;
   final List<String>? analysisTypes;
-  final Map<String, String>? context;
+
+  /// Context for the session: `age_group`, `language`, `platform` and
+  /// `child_age`.
+  final Map<String, dynamic>? context;
 
   const VoiceStreamConfig({
     this.intervalSeconds,
@@ -189,6 +210,7 @@ class VoiceStreamSession {
   final VoiceStreamConfig? _config;
   final VoiceStreamHandlers? _handlers;
   final WebSocketConnector _connector;
+  final String _baseUrl;
   WebSocketChannel? _channel;
   String? _sessionId;
   bool _active = false;
@@ -200,27 +222,22 @@ class VoiceStreamSession {
     this._config,
     this._handlers, {
     WebSocketConnector? connector,
-  }) : _connector = connector ?? _defaultConnector;
+    String baseUrl = 'https://api.tuteliq.ai',
+  })  : _connector = connector ?? _defaultConnector,
+        _baseUrl = baseUrl;
 
   String? get sessionId => _sessionId;
   bool get isActive => _active;
 
   Future<void> connect() async {
-    final uri = Uri.parse(_voiceStreamUrl);
-    _channel = _connector(uri, null);
-
-    // Note: WebSocketChannel.connect doesn't support custom headers directly.
-    // The API key is sent as the first message after connection.
+    // The key goes in the handshake subprotocols: the API authenticates the
+    // upgrade itself and has no auth message.
+    _channel = _connector(
+      voiceStreamUri(_baseUrl),
+      voiceStreamProtocols(_apiKey),
+    );
     await _channel!.ready;
     _active = true;
-
-    // Send auth message
-    _channel!.sink.add(jsonEncode({'type': 'auth', 'token': _apiKey}));
-
-    // Send initial config
-    if (_config != null) {
-      _channel!.sink.add(jsonEncode(_config!.toJson()));
-    }
 
     final readyCompleter = Completer<void>();
 
@@ -234,6 +251,11 @@ class VoiceStreamSession {
             case 'ready':
               final ready = VoiceReadyEvent.fromJson(event);
               _sessionId = ready.sessionId;
+              // The session accepts commands only once it is ready, so the
+              // initial config is sent now rather than at connect.
+              if (_config != null) {
+                _channel?.sink.add(jsonEncode(_config!.toJson()));
+              }
               _handlers?.onReady?.call(ready);
               if (!readyCompleter.isCompleted) readyCompleter.complete();
               break;
@@ -259,7 +281,14 @@ class VoiceStreamSession {
       },
       onDone: () {
         _active = false;
-        _handlers?.onClose?.call(1000, 'Connection closed');
+        final code = _channel?.closeCode ?? 1000;
+        final reason = _channel?.closeReason ?? 'Connection closed';
+        _handlers?.onClose?.call(code, reason);
+        if (!readyCompleter.isCompleted) {
+          readyCompleter.completeError(
+            StateError('Voice stream closed before it was ready ($code: $reason)'),
+          );
+        }
         if (!_summaryCompleter.isCompleted) {
           _summaryCompleter.completeError(
             Exception('Connection closed before session summary'),

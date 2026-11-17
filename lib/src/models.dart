@@ -1410,6 +1410,34 @@ class VideoAnalysisResult {
 // Webhooks
 // =============================================================================
 
+/// Webhook event types.
+class WebhookEventType {
+  WebhookEventType._();
+
+  static const String incidentCritical = 'incident.critical';
+  static const String incidentHigh = 'incident.high';
+  static const String groomingDetected = 'grooming.detected';
+  static const String selfHarmDetected = 'self_harm.detected';
+  static const String bullyingSevere = 'bullying.severe';
+  static const String verificationCompleted = 'verification.completed';
+  static const String minorDetected = 'minor.detected';
+  static const String csamDetected = 'csam.detected';
+  static const String csamCritical = 'csam.critical';
+
+  /// Every event type the API accepts.
+  static const List<String> values = [
+    incidentCritical,
+    incidentHigh,
+    groomingDetected,
+    selfHarmDetected,
+    bullyingSevere,
+    verificationCompleted,
+    minorDetected,
+    csamDetected,
+    csamCritical,
+  ];
+}
+
 /// A webhook configuration.
 class Webhook {
   const Webhook({
@@ -1417,7 +1445,11 @@ class Webhook {
     required this.url,
     required this.events,
     required this.active,
+    this.name,
     this.secret,
+    this.failureCount,
+    this.lastTriggeredAt,
+    this.lastError,
     this.createdAt,
     this.updatedAt,
   });
@@ -1425,20 +1457,32 @@ class Webhook {
   factory Webhook.fromJson(Map<String, dynamic> json) {
     return Webhook(
       id: json['id'] as String,
+      name: json['name'] as String?,
       url: json['url'] as String,
-      events: List<String>.from(json['events'] as List),
-      active: json['active'] as bool,
+      events: List<String>.from(json['events'] as List? ?? const []),
+      active: json['is_active'] as bool? ?? false,
       secret: json['secret'] as String?,
+      failureCount: (json['failure_count'] as num?)?.toInt(),
+      lastTriggeredAt: json['last_triggered_at'] as String?,
+      lastError: json['last_error'] as String?,
       createdAt: json['created_at'] as String?,
       updatedAt: json['updated_at'] as String?,
     );
   }
 
   final String id;
+  final String? name;
   final String url;
   final List<String> events;
+
+  /// Whether the webhook receives deliveries (`is_active` in the API).
   final bool active;
+
+  /// The signing secret. Present only when the webhook is created.
   final String? secret;
+  final int? failureCount;
+  final String? lastTriggeredAt;
+  final String? lastError;
   final String? createdAt;
   final String? updatedAt;
 }
@@ -1449,7 +1493,7 @@ class WebhookListResult {
 
   factory WebhookListResult.fromJson(Map<String, dynamic> json) {
     return WebhookListResult(
-      webhooks: (json['webhooks'] as List)
+      webhooks: (json['webhooks'] as List? ?? const [])
           .map((w) => Webhook.fromJson(w as Map<String, dynamic>))
           .toList(),
     );
@@ -1461,93 +1505,129 @@ class WebhookListResult {
 /// Input for creating a webhook.
 class CreateWebhookInput {
   const CreateWebhookInput({
+    required this.name,
     required this.url,
     required this.events,
+    this.headers,
+    @Deprecated('New webhooks are always active; use updateWebhook to pause one.')
     this.active = true,
   });
 
+  /// A name for the webhook (1 to 100 characters).
+  final String name;
+
+  /// The HTTPS endpoint that receives deliveries.
   final String url;
+
+  /// One to five event types; see [WebhookEventType].
   final List<String> events;
+
+  /// Extra headers sent with every delivery.
+  final Map<String, String>? headers;
+
+  /// Not sent: the API creates every webhook active.
   final bool active;
 }
 
 /// Result from creating a webhook.
 class CreateWebhookResult {
-  const CreateWebhookResult({required this.message, required this.webhook});
+  const CreateWebhookResult({required this.webhook, this.message});
 
   factory CreateWebhookResult.fromJson(Map<String, dynamic> json) {
     return CreateWebhookResult(
-      message: json['message'] as String,
-      webhook: Webhook.fromJson(json['webhook'] as Map<String, dynamic>),
+      webhook: Webhook.fromJson(json),
+      message: json['message'] as String?,
     );
   }
 
-  final String message;
+  /// The created webhook, including its signing secret.
   final Webhook webhook;
+  final String? message;
 }
 
-/// Input for updating a webhook.
+/// Input for updating a webhook. Only the fields that are set are sent.
 class UpdateWebhookInput {
-  const UpdateWebhookInput({this.url, this.events, this.active});
+  const UpdateWebhookInput({
+    this.name,
+    this.url,
+    this.events,
+    this.active,
+    this.headers,
+  });
 
+  final String? name;
   final String? url;
   final List<String>? events;
+
+  /// Sent as `is_active`.
   final bool? active;
+  final Map<String, String>? headers;
 }
 
 /// Result from updating a webhook.
 class UpdateWebhookResult {
-  const UpdateWebhookResult({required this.message, required this.webhook});
+  const UpdateWebhookResult({required this.webhook, this.message});
 
   factory UpdateWebhookResult.fromJson(Map<String, dynamic> json) {
     return UpdateWebhookResult(
-      message: json['message'] as String,
-      webhook: Webhook.fromJson(json['webhook'] as Map<String, dynamic>),
+      webhook: Webhook.fromJson(json),
+      message: json['message'] as String?,
     );
   }
 
-  final String message;
   final Webhook webhook;
+  final String? message;
 }
 
 /// Result from deleting a webhook.
 class DeleteWebhookResult {
-  const DeleteWebhookResult({required this.message});
+  const DeleteWebhookResult({required this.success, this.message});
 
   factory DeleteWebhookResult.fromJson(Map<String, dynamic> json) {
-    return DeleteWebhookResult(message: json['message'] as String);
+    return DeleteWebhookResult(
+      success: json['success'] as bool? ?? false,
+      message: json['message'] as String?,
+    );
   }
 
-  final String message;
+  final bool success;
+  final String? message;
 }
 
 /// Result from testing a webhook.
 class TestWebhookResult {
-  const TestWebhookResult({required this.message, this.statusCode});
+  const TestWebhookResult({
+    required this.success,
+    this.statusCode,
+    this.latencyMs,
+    this.error,
+  });
 
   factory TestWebhookResult.fromJson(Map<String, dynamic> json) {
     return TestWebhookResult(
-      message: json['message'] as String,
-      statusCode: json['status_code'] as int?,
+      success: json['success'] as bool? ?? false,
+      statusCode: (json['status_code'] as num?)?.toInt(),
+      latencyMs: (json['latency_ms'] as num?)?.toInt(),
+      error: json['error'] as String?,
     );
   }
 
-  final String message;
+  /// Whether the endpoint answered with a 2xx status.
+  final bool success;
   final int? statusCode;
+  final int? latencyMs;
+  final String? error;
 }
 
 /// Result from regenerating a webhook secret.
 class RegenerateSecretResult {
-  const RegenerateSecretResult({required this.message, required this.secret});
+  const RegenerateSecretResult({required this.secret});
 
   factory RegenerateSecretResult.fromJson(Map<String, dynamic> json) {
-    return RegenerateSecretResult(
-      message: json['message'] as String,
-      secret: json['secret'] as String,
-    );
+    return RegenerateSecretResult(secret: json['secret'] as String);
   }
 
-  final String message;
+  /// The new signing secret, which replaces the previous one.
   final String secret;
 }
 
@@ -1753,9 +1833,9 @@ class DocumentExtractionSummary {
 
   factory DocumentExtractionSummary.fromJson(Map<String, dynamic> json) {
     return DocumentExtractionSummary(
-      textLayerPages: json['text_layer_pages'] as int,
-      ocrPages: json['ocr_pages'] as int,
-      failedPages: json['failed_pages'] as int,
+      textLayerPages: _optInt(json['text_layer_pages']) ?? 0,
+      ocrPages: _optInt(json['ocr_pages']) ?? 0,
+      failedPages: _optInt(json['failed_pages']) ?? 0,
       averageOcrConfidence: (json['average_ocr_confidence'] as num).toDouble(),
     );
   }
@@ -1829,10 +1909,10 @@ class DocumentPageResult {
 
   factory DocumentPageResult.fromJson(Map<String, dynamic> json) {
     return DocumentPageResult(
-      pageNumber: json['page_number'] as int,
+      pageNumber: _optInt(json['page_number']) ?? 0,
       textPreview: json['text_preview'] as String,
       extractionMethod: json['extraction_method'] as String,
-      ocrConfidence: (json['ocr_confidence'] as num?)?.toDouble(),
+      ocrConfidence: _optDouble(json['ocr_confidence']),
       results: (json['results'] as List)
           .map((e) => DocumentPageEndpointResult.fromJson(e as Map<String, dynamic>))
           .toList(),
@@ -1850,7 +1930,7 @@ class DocumentPageResult {
   final String pageSeverity;
 }
 
-/// A page flagged with risk score >= 0.3.
+/// A page the analysis flagged.
 class DocumentFlaggedPage {
   const DocumentFlaggedPage({
     required this.pageNumber,
@@ -1861,7 +1941,7 @@ class DocumentFlaggedPage {
 
   factory DocumentFlaggedPage.fromJson(Map<String, dynamic> json) {
     return DocumentFlaggedPage(
-      pageNumber: json['page_number'] as int,
+      pageNumber: _optInt(json['page_number']) ?? 0,
       riskScore: (json['risk_score'] as num).toDouble(),
       severity: json['severity'] as String,
       detectedEndpoints: (json['detected_endpoints'] as List).cast<String>(),
@@ -1901,8 +1981,8 @@ class DocumentAnalysisResult {
     return DocumentAnalysisResult(
       fileId: json['file_id'] as String?,
       documentHash: json['document_hash'] as String,
-      totalPages: json['total_pages'] as int,
-      pagesAnalyzed: json['pages_analyzed'] as int,
+      totalPages: _optInt(json['total_pages']) ?? 0,
+      pagesAnalyzed: _optInt(json['pages_analyzed']) ?? 0,
       extractionSummary: DocumentExtractionSummary.fromJson(
           json['extraction_summary'] as Map<String, dynamic>),
       pageResults: (json['page_results'] as List)
@@ -1914,8 +1994,8 @@ class DocumentAnalysisResult {
       flaggedPages: (json['flagged_pages'] as List)
           .map((e) => DocumentFlaggedPage.fromJson(e as Map<String, dynamic>))
           .toList(),
-      creditsUsed: json['credits_used'] as int,
-      processingTimeMs: json['processing_time_ms'] as int,
+      creditsUsed: _optInt(json['credits_used']) ?? 0,
+      processingTimeMs: _optInt(json['processing_time_ms']) ?? 0,
       language: json['language'] as String?,
       languageStatus: json['language_status'] as String?,
       support: json['support'] as Map<String, dynamic>?,
@@ -1943,4 +2023,1050 @@ class DocumentAnalysisResult {
   final String? externalId;
   final String? customerId;
   final Map<String, dynamic>? metadata;
+}
+
+// =============================================================================
+// JSON helpers
+// =============================================================================
+
+double? _optDouble(Object? value) => (value as num?)?.toDouble();
+
+int? _optInt(Object? value) => (value as num?)?.toInt();
+
+List<String> _stringList(Object? value) =>
+    value is List ? value.map((e) => e.toString()).toList() : const [];
+
+Map<String, dynamic>? _optMap(Object? value) =>
+    value is Map<String, dynamic> ? value : null;
+
+List<Map<String, dynamic>> _mapList(Object? value) => value is List
+    ? value.whereType<Map<String, dynamic>>().toList()
+    : const [];
+
+// =============================================================================
+// Verification Sessions
+// =============================================================================
+
+/// Input for creating a hosted age or identity verification session.
+class CreateVerificationSessionInput {
+  const CreateVerificationSessionInput({
+    this.mode = VerificationMode.age,
+    this.documentType,
+    this.chipPolicy,
+    this.autoCapture,
+  });
+
+  /// Age verification or full identity verification.
+  final VerificationMode mode;
+
+  /// Restricts the session to one document type.
+  final VerificationDocumentType? documentType;
+
+  /// How a passport or ID card chip read counts as document evidence.
+  /// The API defaults to [ChipPolicy.optional].
+  final ChipPolicy? chipPolicy;
+
+  /// Whether the hosted page takes the document photo itself once the
+  /// document is framed. The API defaults to `true`.
+  final bool? autoCapture;
+
+  Map<String, dynamic> toJson() {
+    final map = <String, dynamic>{'mode': mode.value};
+    if (documentType != null) map['document_type'] = documentType!.value;
+    if (chipPolicy != null && chipPolicy != ChipPolicy.unknown) {
+      map['chip_policy'] = chipPolicy!.value;
+    }
+    if (autoCapture != null) map['auto_capture'] = autoCapture;
+    return map;
+  }
+}
+
+/// A newly created verification session.
+class VerificationSession {
+  const VerificationSession({
+    required this.sessionId,
+    required this.mobileUrl,
+    required this.expiresAt,
+    required this.mode,
+    this.verificationMode,
+    this.chipPolicy,
+    this.autoCapture,
+    this.recommendedImageWidth,
+  });
+
+  factory VerificationSession.fromJson(Map<String, dynamic> json) {
+    return VerificationSession(
+      sessionId: json['session_id'] as String,
+      mobileUrl: json['mobile_url'] as String,
+      expiresAt: _optInt(json['expires_at']) ?? 0,
+      mode: json['mode'] as String? ?? '',
+      verificationMode: json['verification_mode'] as String?,
+      chipPolicy: json['chip_policy'] == null
+          ? null
+          : ChipPolicy.fromString(json['chip_policy'] as String?),
+      autoCapture: json['auto_capture'] as bool?,
+      recommendedImageWidth: _optInt(json['recommended_image_width']),
+    );
+  }
+
+  final String sessionId;
+
+  /// The hosted page to open on the user's phone (or show as a QR code).
+  final String mobileUrl;
+
+  /// When the session expires, in milliseconds since the epoch.
+  final int expiresAt;
+
+  /// `age` or `identity`.
+  final String mode;
+
+  /// `full` (document and live face) or `liveness_only`.
+  final String? verificationMode;
+  final ChipPolicy? chipPolicy;
+  final bool? autoCapture;
+
+  /// The capture width, in pixels, the API recommends for uploads.
+  final int? recommendedImageWidth;
+
+  /// [expiresAt] as a [DateTime].
+  DateTime get expiresAtTime =>
+      DateTime.fromMillisecondsSinceEpoch(expiresAt, isUtc: true);
+}
+
+/// Face match outcome of a verification.
+class VerificationFaceMatch {
+  const VerificationFaceMatch({
+    required this.matched,
+    this.confidence,
+    this.matchScore,
+  });
+
+  factory VerificationFaceMatch.fromJson(Map<String, dynamic> json) {
+    return VerificationFaceMatch(
+      matched: json['matched'] as bool? ?? false,
+      confidence: _optDouble(json['confidence']),
+      matchScore: _optDouble(json['match_score']),
+    );
+  }
+
+  final bool matched;
+
+  /// Kept for compatibility; prefer [matchScore].
+  final double? confidence;
+
+  /// How strongly the faces match, from 0.0 to 1.0: 0.5 at the match
+  /// threshold, high for a clear match, near 0 for different people.
+  final double? matchScore;
+}
+
+/// Outcome of a completed or failed verification session.
+class VerificationResult {
+  const VerificationResult({
+    this.status,
+    this.age,
+    this.ageRangeLow,
+    this.ageRangeHigh,
+    this.isMinor,
+    this.documentEvidence,
+    this.faceMatch,
+    this.livenessValid,
+    this.dateOfBirth,
+    this.failureReasons = const [],
+    this.document,
+  });
+
+  factory VerificationResult.fromJson(Map<String, dynamic> json) {
+    final ageRange = _optMap(json['age_range']);
+    final faceMatch = _optMap(json['face_match']);
+    return VerificationResult(
+      status: json['status'] as String?,
+      age: _optDouble(json['age']),
+      ageRangeLow: _optDouble(ageRange?['low']),
+      ageRangeHigh: _optDouble(ageRange?['high']),
+      isMinor: json['is_minor'] as bool?,
+      documentEvidence: json['document_evidence'] as String?,
+      faceMatch:
+          faceMatch == null ? null : VerificationFaceMatch.fromJson(faceMatch),
+      livenessValid: _optMap(json['liveness'])?['valid'] as bool?,
+      dateOfBirth: json['date_of_birth'] as String?,
+      failureReasons: _stringList(json['failure_reasons']),
+      document: _optMap(json['document']),
+    );
+  }
+
+  final String? status;
+  final double? age;
+
+  /// When the age came from the selfie alone: the range the true age falls
+  /// in about 8 cases out of 10.
+  final double? ageRangeLow;
+  final double? ageRangeHigh;
+  final bool? isMinor;
+
+  /// `photo`, `chip` or `photo_and_chip`.
+  final String? documentEvidence;
+  final VerificationFaceMatch? faceMatch;
+  final bool? livenessValid;
+  final String? dateOfBirth;
+  final List<String> failureReasons;
+
+  /// Document details. The extracted identity fields are returned once, to
+  /// the API key that created the session, and are absent on later polls.
+  final Map<String, dynamic>? document;
+}
+
+/// Status and outcome of a verification session.
+class VerificationSessionResult {
+  const VerificationSessionResult({
+    required this.sessionId,
+    required this.status,
+    required this.rawStatus,
+    this.result,
+    this.verificationMode,
+    this.documentEvidence,
+    this.stepProgress,
+    this.chipPolicy,
+    this.capture,
+    this.createdAt,
+    this.expiresAt,
+  });
+
+  factory VerificationSessionResult.fromJson(Map<String, dynamic> json) {
+    final rawStatus = json['status'] as String? ?? '';
+    final result = _optMap(json['result']);
+    return VerificationSessionResult(
+      sessionId: json['session_id'] as String,
+      status: VerificationSessionStatus.fromString(rawStatus),
+      rawStatus: rawStatus,
+      result: result == null ? null : VerificationResult.fromJson(result),
+      verificationMode: json['verification_mode'] as String?,
+      documentEvidence: json['document_evidence'] as String?,
+      stepProgress: json['step_progress'] as String?,
+      chipPolicy: json['chip_policy'] == null
+          ? null
+          : ChipPolicy.fromString(json['chip_policy'] as String?),
+      capture: _optMap(json['capture']),
+      createdAt: _optInt(json['created_at']),
+      expiresAt: _optInt(json['expires_at']),
+    );
+  }
+
+  final String sessionId;
+  final VerificationSessionStatus status;
+
+  /// The status exactly as the API sent it, for values newer than the SDK.
+  final String rawStatus;
+  final VerificationResult? result;
+  final String? verificationMode;
+  final String? documentEvidence;
+
+  /// The step the user has reached, for showing progress while polling.
+  final String? stepProgress;
+  final ChipPolicy? chipPolicy;
+
+  /// How the uploads were captured, as the client reported it.
+  final Map<String, dynamic>? capture;
+
+  /// Milliseconds since the epoch.
+  final int? createdAt;
+
+  /// Milliseconds since the epoch.
+  final int? expiresAt;
+}
+
+// =============================================================================
+// Image Match
+// =============================================================================
+
+/// Checks that verifyImageMatch can run.
+class ImageMatchCheck {
+  ImageMatchCheck._();
+
+  static const String faceMatch = 'face_match';
+  static const String age = 'age';
+  static const String forensic = 'forensic';
+  static const String synthetic = 'synthetic';
+}
+
+/// Face match outcome of an image match.
+class ImageFaceMatch {
+  const ImageFaceMatch({
+    required this.matched,
+    this.similarity,
+    this.matchScore,
+    this.reason,
+  });
+
+  factory ImageFaceMatch.fromJson(Map<String, dynamic> json) {
+    return ImageFaceMatch(
+      matched: json['matched'] as bool? ?? false,
+      similarity: _optDouble(json['similarity']),
+      matchScore: _optDouble(json['match_score']),
+      reason: json['reason'] as String?,
+    );
+  }
+
+  final bool matched;
+  final double? similarity;
+  final double? matchScore;
+  final String? reason;
+}
+
+/// Result of verifyImageMatch.
+class VerifyImageMatchResult {
+  const VerifyImageMatchResult({
+    required this.schemaVersion,
+    required this.checksRun,
+    this.faceMatch,
+    this.estimatedAge,
+    this.ageConfidence,
+    this.forensic,
+    this.synthetic,
+    this.creditsUsed,
+    this.processingMs,
+    this.externalId,
+    this.customerId,
+    this.metadata,
+  });
+
+  factory VerifyImageMatchResult.fromJson(Map<String, dynamic> json) {
+    final faceMatch = _optMap(json['face_match']);
+    final age = _optMap(json['age']);
+    return VerifyImageMatchResult(
+      schemaVersion: json['schema_version'] as String? ?? '',
+      checksRun: _stringList(json['checks_run']),
+      faceMatch: faceMatch == null ? null : ImageFaceMatch.fromJson(faceMatch),
+      estimatedAge: _optDouble(age?['estimated_age']),
+      ageConfidence: _optDouble(age?['confidence']),
+      forensic: _optMap(json['forensic']),
+      synthetic: _optMap(json['synthetic']),
+      creditsUsed: _optInt(json['credits_used']),
+      processingMs: _optInt(json['processing_ms']),
+      externalId: json['external_id'] as String?,
+      customerId: json['customer_id'] as String?,
+      metadata: _optMap(json['metadata']),
+    );
+  }
+
+  final String schemaVersion;
+
+  /// The checks that ran. `face_match` runs only with a reference image.
+  final List<String> checksRun;
+  final ImageFaceMatch? faceMatch;
+  final double? estimatedAge;
+  final double? ageConfidence;
+  final Map<String, dynamic>? forensic;
+  final Map<String, dynamic>? synthetic;
+  final int? creditsUsed;
+  final int? processingMs;
+  final String? externalId;
+  final String? customerId;
+  final Map<String, dynamic>? metadata;
+}
+
+// =============================================================================
+// Incidents
+// =============================================================================
+
+/// Filters for listing incidents. Every field is optional.
+class ListIncidentsInput {
+  const ListIncidentsInput({
+    this.category,
+    this.severity,
+    this.status,
+    this.source,
+    this.from,
+    this.to,
+    this.platform,
+    this.externalId,
+    this.customerId,
+    this.limit,
+    this.cursor,
+    this.includeSummary = false,
+  });
+
+  /// Risk category, for example `bullying` or `grooming`.
+  final String? category;
+
+  /// `low`, `medium`, `high` or `critical`.
+  final String? severity;
+
+  /// `new`, `reviewed`, `escalated`, `resolved` or `dismissed`.
+  final String? status;
+
+  /// `text`, `voice`, `image`, `video` or `video_stream`.
+  final String? source;
+
+  /// ISO 8601 inclusive lower bound on the creation time.
+  final String? from;
+
+  /// ISO 8601 exclusive upper bound on the creation time.
+  final String? to;
+  final String? platform;
+  final String? externalId;
+  final String? customerId;
+
+  /// 1 to 100; the API defaults to 25.
+  final int? limit;
+
+  /// The `nextCursor` of the previous page.
+  final String? cursor;
+
+  /// Includes each incident's summary (extra credits per row).
+  final bool includeSummary;
+
+  Map<String, String> toQuery() {
+    final query = <String, String>{};
+    if (category != null) query['category'] = category!;
+    if (severity != null) query['severity'] = severity!;
+    if (status != null) query['status'] = status!;
+    if (source != null) query['source'] = source!;
+    if (from != null) query['from'] = from!;
+    if (to != null) query['to'] = to!;
+    if (platform != null) query['platform'] = platform!;
+    if (externalId != null) query['external_id'] = externalId!;
+    if (customerId != null) query['customer_id'] = customerId!;
+    if (limit != null) query['limit'] = limit.toString();
+    if (cursor != null) query['cursor'] = cursor!;
+    if (includeSummary) query['include_summary'] = 'true';
+    return query;
+  }
+}
+
+/// An incident recorded for the account.
+///
+/// List rows carry the summary fields; `getIncident` also fills the detail
+/// fields. Every field the API sends is kept in [raw].
+class Incident {
+  const Incident({
+    required this.id,
+    required this.riskCategory,
+    required this.riskLevel,
+    required this.status,
+    required this.raw,
+    this.confidenceScore,
+    this.detectedPatterns = const [],
+    this.recommendedActions = const [],
+    this.platform,
+    this.language,
+    this.source,
+    this.fileId,
+    this.recommendedStatus,
+    this.speakerStance,
+    this.isTest,
+    this.externalId,
+    this.customerId,
+    this.createdAt,
+    this.summary,
+    this.review,
+    this.e2eEnvelopeFields = const [],
+  });
+
+  factory Incident.fromJson(Map<String, dynamic> json) {
+    return Incident(
+      id: json['id'] as String,
+      riskCategory: json['risk_category'] as String? ?? '',
+      riskLevel: json['risk_level'] as String? ?? '',
+      status: json['status'] as String? ?? '',
+      confidenceScore: _optDouble(json['confidence_score']),
+      detectedPatterns: _stringList(json['detected_patterns']),
+      recommendedActions: _stringList(json['recommended_actions']),
+      platform: json['platform'] as String?,
+      language: json['language'] as String?,
+      source: json['source'] as String?,
+      fileId: json['file_id'] as String?,
+      recommendedStatus: json['recommended_status'] as String?,
+      speakerStance: json['speaker_stance'] as String?,
+      isTest: json['is_test'] as bool?,
+      externalId: json['external_id'] as String?,
+      customerId: json['customer_id'] as String?,
+      createdAt: json['created_at'] as String?,
+      summary: json['summary'],
+      review: _optMap(json['review']),
+      e2eEnvelopeFields: _stringList(json['_e2e_envelope_fields']),
+      raw: json,
+    );
+  }
+
+  final String id;
+  final String riskCategory;
+
+  /// `low`, `moderate`, `high` or `critical`.
+  final String riskLevel;
+  final String status;
+  final double? confidenceScore;
+  final List<String> detectedPatterns;
+  final List<String> recommendedActions;
+  final String? platform;
+  final String? language;
+  final String? source;
+  final String? fileId;
+  final String? recommendedStatus;
+  final String? speakerStance;
+  final bool? isTest;
+  final String? externalId;
+  final String? customerId;
+
+  /// ISO 8601 timestamp.
+  final String? createdAt;
+
+  /// A string, an object, or an encrypted envelope when the account uses its
+  /// own encryption key (see [e2eEnvelopeFields]).
+  final Object? summary;
+  final Map<String, dynamic>? review;
+
+  /// Fields that are encrypted with the account's own key and must be
+  /// decrypted locally.
+  final List<String> e2eEnvelopeFields;
+
+  /// The incident exactly as the API sent it.
+  final Map<String, dynamic> raw;
+}
+
+/// A page of incidents.
+class ListIncidentsResult {
+  const ListIncidentsResult({
+    required this.incidents,
+    required this.totalReturned,
+    this.nextCursor,
+  });
+
+  factory ListIncidentsResult.fromJson(Map<String, dynamic> json) {
+    return ListIncidentsResult(
+      incidents: _mapList(json['incidents']).map(Incident.fromJson).toList(),
+      totalReturned: _optInt(json['total_returned']) ?? 0,
+      nextCursor: json['next_cursor'] as String?,
+    );
+  }
+
+  final List<Incident> incidents;
+  final int totalReturned;
+
+  /// Pass as [ListIncidentsInput.cursor] for the next page; `null` on the
+  /// last page.
+  final String? nextCursor;
+}
+
+/// Incident counts for the account.
+class IncidentsOverview {
+  const IncidentsOverview({
+    required this.totalIncidents,
+    required this.requiresReviewCount,
+    required this.last24hCount,
+    required this.last7dCount,
+    required this.last30dCount,
+    required this.countsByCategory,
+    required this.countsBySeverity,
+    required this.countsBySource,
+    required this.countsByStatus,
+    required this.topPlatforms,
+    this.from,
+    this.to,
+  });
+
+  factory IncidentsOverview.fromJson(Map<String, dynamic> json) {
+    final timeframe = _optMap(json['timeframe']);
+    return IncidentsOverview(
+      from: timeframe?['from'] as String?,
+      to: timeframe?['to'] as String?,
+      totalIncidents: _optInt(json['total_incidents']) ?? 0,
+      requiresReviewCount: _optInt(json['requires_review_count']) ?? 0,
+      last24hCount: _optInt(json['last_24h_count']) ?? 0,
+      last7dCount: _optInt(json['last_7d_count']) ?? 0,
+      last30dCount: _optInt(json['last_30d_count']) ?? 0,
+      countsByCategory: _counts(json['counts_by_category']),
+      countsBySeverity: _counts(json['counts_by_severity']),
+      countsBySource: _counts(json['counts_by_source']),
+      countsByStatus: _counts(json['counts_by_status']),
+      topPlatforms: {
+        for (final row in _mapList(json['top_platforms']))
+          row['platform'].toString(): _optInt(row['count']) ?? 0,
+      },
+    );
+  }
+
+  static Map<String, int> _counts(Object? value) => {
+        for (final entry in (_optMap(value) ?? const {}).entries)
+          entry.key: _optInt(entry.value) ?? 0,
+      };
+
+  final String? from;
+  final String? to;
+  final int totalIncidents;
+  final int requiresReviewCount;
+  final int last24hCount;
+  final int last7dCount;
+  final int last30dCount;
+  final Map<String, int> countsByCategory;
+  final Map<String, int> countsBySeverity;
+  final Map<String, int> countsBySource;
+  final Map<String, int> countsByStatus;
+
+  /// Incident count per platform, busiest first.
+  final Map<String, int> topPlatforms;
+}
+
+/// One bucket of an incident trend series.
+class IncidentTrendBucket {
+  const IncidentTrendBucket({
+    required this.bucketStart,
+    required this.total,
+    required this.bySeverity,
+  });
+
+  factory IncidentTrendBucket.fromJson(Map<String, dynamic> json) {
+    return IncidentTrendBucket(
+      bucketStart: json['bucket_start'] as String? ?? '',
+      total: _optInt(json['total']) ?? 0,
+      bySeverity: IncidentsOverview._counts(json['by_severity']),
+    );
+  }
+
+  final String bucketStart;
+  final int total;
+  final Map<String, int> bySeverity;
+}
+
+/// Incident counts over time.
+class IncidentTrends {
+  const IncidentTrends({
+    required this.bucketSize,
+    required this.series,
+    this.from,
+    this.to,
+  });
+
+  factory IncidentTrends.fromJson(Map<String, dynamic> json) {
+    final timeframe = _optMap(json['timeframe']);
+    return IncidentTrends(
+      bucketSize: json['bucket_size'] as String? ?? '',
+      from: timeframe?['from'] as String?,
+      to: timeframe?['to'] as String?,
+      series:
+          _mapList(json['series']).map(IncidentTrendBucket.fromJson).toList(),
+    );
+  }
+
+  /// `hour`, `day` or `week`.
+  final String bucketSize;
+  final String? from;
+  final String? to;
+  final List<IncidentTrendBucket> series;
+}
+
+/// A moderator decision on one or more incidents.
+class ReviewIncidentInput {
+  const ReviewIncidentInput({
+    required this.action,
+    required this.reasonCode,
+    required this.moderatorExternalId,
+    this.reasonComment,
+    this.newRiskLevel,
+    this.newRiskCategory,
+    this.retentionClass,
+  });
+
+  /// `confirm`, `downgrade`, `escalate`, `reclassify`, `dismiss`, `resolve`
+  /// or `reopen`.
+  final String action;
+
+  /// `confirmed_accurate`, `false_positive`, `out_of_context`,
+  /// `insufficient_severity`, `incorrect_category`,
+  /// `requires_law_enforcement`, `parent_notified` or `other`.
+  final String reasonCode;
+
+  /// A stable identifier for the moderator, so the audit trail can
+  /// attribute the decision.
+  final String moderatorExternalId;
+  final String? reasonComment;
+  final String? newRiskLevel;
+
+  /// Required when [action] is `reclassify`.
+  final String? newRiskCategory;
+  final String? retentionClass;
+
+  Map<String, dynamic> toJson() {
+    final map = <String, dynamic>{
+      'action': action,
+      'reason_code': reasonCode,
+      'moderator_external_id': moderatorExternalId,
+    };
+    if (reasonComment != null) map['reason_comment'] = reasonComment;
+    if (newRiskLevel != null) map['new_risk_level'] = newRiskLevel;
+    if (newRiskCategory != null) map['new_risk_category'] = newRiskCategory;
+    if (retentionClass != null) map['retention_class'] = retentionClass;
+    return map;
+  }
+}
+
+/// Result of reviewing one incident.
+class ReviewIncidentResult {
+  const ReviewIncidentResult({
+    required this.incidentId,
+    this.ok = true,
+    this.original,
+    this.revised,
+    this.auditReceipt,
+    this.error,
+  });
+
+  factory ReviewIncidentResult.fromJson(Map<String, dynamic> json) {
+    return ReviewIncidentResult(
+      incidentId: json['incident_id'] as String? ?? '',
+      ok: json['ok'] as bool? ?? true,
+      original: _optMap(json['original']),
+      revised: _optMap(json['revised']),
+      auditReceipt: _optMap(json['audit_receipt']),
+      error: json['error'] as String?,
+    );
+  }
+
+  final String incidentId;
+
+  /// False when this incident failed inside a batch review.
+  final bool ok;
+
+  /// `risk_category` and `risk_level` before the review.
+  final Map<String, dynamic>? original;
+
+  /// `risk_category` and `risk_level` after the review.
+  final Map<String, dynamic>? revised;
+  final Map<String, dynamic>? auditReceipt;
+  final String? error;
+}
+
+/// Result of reviewing several incidents at once.
+class BatchReviewIncidentsResult {
+  const BatchReviewIncidentsResult({
+    required this.total,
+    required this.succeeded,
+    required this.failed,
+    required this.results,
+  });
+
+  factory BatchReviewIncidentsResult.fromJson(Map<String, dynamic> json) {
+    return BatchReviewIncidentsResult(
+      total: _optInt(json['total']) ?? 0,
+      succeeded: _optInt(json['succeeded']) ?? 0,
+      failed: _optInt(json['failed']) ?? 0,
+      results: _mapList(json['results'])
+          .map(ReviewIncidentResult.fromJson)
+          .toList(),
+    );
+  }
+
+  final int total;
+  final int succeeded;
+  final int failed;
+  final List<ReviewIncidentResult> results;
+}
+
+// =============================================================================
+// Nickname
+// =============================================================================
+
+/// Input for reading a display name.
+class DetectNicknameInput {
+  const DetectNicknameInput({
+    required this.name,
+    this.strictness,
+    this.language,
+    this.ageGroup,
+    this.conversationType,
+    this.platformReserved,
+  });
+
+  /// The display name, as the user typed it.
+  final String name;
+
+  /// How readily a doubtful reading is acted on; the API defaults to
+  /// `balanced`.
+  final String? strictness;
+  final String? language;
+  final String? ageGroup;
+
+  /// The setting the name is shown in, for example `gaming_chat`.
+  final String? conversationType;
+
+  /// Names the platform reserves for itself.
+  final List<String>? platformReserved;
+
+  Map<String, dynamic> toJson() {
+    final context = <String, dynamic>{};
+    if (language != null) context['language'] = language;
+    if (ageGroup != null) context['age_group'] = ageGroup;
+    if (conversationType != null) {
+      context['conversation_type'] = conversationType;
+    }
+    if (platformReserved != null) {
+      context['platform_reserved'] = platformReserved;
+    }
+    final map = <String, dynamic>{'name': name};
+    if (strictness != null) map['strictness'] = strictness;
+    if (context.isNotEmpty) map['context'] = context;
+    return map;
+  }
+}
+
+/// One part of a display name and how it reads.
+class NicknamePart {
+  const NicknamePart({required this.text, required this.reading, this.category});
+
+  factory NicknamePart.fromJson(Map<String, dynamic> json) {
+    return NicknamePart(
+      text: json['text'] as String? ?? '',
+      reading: json['reading'] as String? ?? '',
+      category: json['category'] as String?,
+    );
+  }
+
+  final String text;
+
+  /// `ordinary`, `concerning` or `unclear`.
+  final String reading;
+  final String? category;
+}
+
+/// Result of reading a display name.
+class NicknameResult {
+  const NicknameResult({
+    required this.signal,
+    required this.categories,
+    required this.parts,
+    required this.rationale,
+    required this.recommendation,
+    this.recommendationDetail,
+    this.confidence,
+    this.language,
+    this.strictness,
+    this.readingComplete,
+    this.creditsUsed,
+  });
+
+  factory NicknameResult.fromJson(Map<String, dynamic> json) {
+    return NicknameResult(
+      signal: json['signal'] as String? ?? '',
+      categories: _stringList(json['categories']),
+      parts: _mapList(json['parts']).map(NicknamePart.fromJson).toList(),
+      rationale: json['rationale'] as String? ?? '',
+      recommendation: json['recommendation'] as String? ?? '',
+      recommendationDetail: json['recommendation_detail'] as String?,
+      confidence: _optDouble(json['confidence']),
+      language: json['language'] as String?,
+      strictness: json['strictness'] as String?,
+      readingComplete: json['reading_complete'] as bool?,
+      creditsUsed: _optInt(json['credits_used']),
+    );
+  }
+
+  /// `none`, `low` or `review`: a signal about the name, not a verdict on
+  /// the person.
+  final String signal;
+  final List<String> categories;
+  final List<NicknamePart> parts;
+  final String rationale;
+
+  /// `allow`, `allow_and_watch`, `ask_to_rename` or `hold_for_review`.
+  final String recommendation;
+  final String? recommendationDetail;
+  final double? confidence;
+  final String? language;
+  final String? strictness;
+  final bool? readingComplete;
+  final int? creditsUsed;
+}
+
+// =============================================================================
+// Synthetic Content
+// =============================================================================
+
+/// Result of synthetic (AI-generated) content detection for text, image,
+/// audio or video.
+///
+/// The fields shared by every input type are typed; the input-specific
+/// analysis is kept in [raw].
+class SyntheticContentResult {
+  const SyntheticContentResult({
+    required this.detected,
+    required this.classification,
+    required this.confidence,
+    required this.riskScore,
+    required this.level,
+    required this.recommendedAction,
+    required this.rationale,
+    required this.raw,
+    this.endpoint,
+    this.severity,
+    this.categories = const [],
+    this.evidence = const [],
+    this.actionDetail,
+    this.inputType,
+    this.creditsUsed,
+    this.processingTimeMs,
+    this.language,
+    this.languageStatus,
+    this.externalId,
+    this.customerId,
+    this.metadata,
+    this.fileId,
+  });
+
+  factory SyntheticContentResult.fromJson(Map<String, dynamic> json) {
+    return SyntheticContentResult(
+      endpoint: json['endpoint'] as String?,
+      detected: json['detected'] as bool? ?? false,
+      classification: json['classification'] as String? ?? 'unknown',
+      confidence: _optDouble(json['confidence']) ?? 0,
+      riskScore: _optDouble(json['risk_score']) ?? 0,
+      severity: _optDouble(json['severity']),
+      level: json['level'] as String? ?? 'none',
+      categories: _mapList(json['categories'])
+          .map(DetectionCategory.fromJson)
+          .toList(),
+      evidence:
+          _mapList(json['evidence']).map(DetectionEvidence.fromJson).toList(),
+      recommendedAction: json['recommended_action'] as String? ?? 'none',
+      actionDetail: json['action_detail'] as String?,
+      rationale: json['rationale'] as String? ?? '',
+      inputType: json['input_type'] as String?,
+      creditsUsed: _optInt(json['credits_used']),
+      processingTimeMs: _optDouble(json['processing_time_ms']),
+      language: json['language'] as String?,
+      languageStatus: json['language_status'] as String?,
+      externalId: json['external_id'] as String?,
+      customerId: json['customer_id'] as String?,
+      metadata: _optMap(json['metadata']),
+      fileId: json['file_id'] as String?,
+      raw: json,
+    );
+  }
+
+  final String? endpoint;
+  final bool detected;
+
+  /// `confirmed_synthetic`, `suspected_synthetic`, `unknown` or
+  /// `confirmed_authentic`.
+  final String classification;
+  final double confidence;
+  final double riskScore;
+  final double? severity;
+  final String level;
+  final List<DetectionCategory> categories;
+  final List<DetectionEvidence> evidence;
+  final String recommendedAction;
+  final String? actionDetail;
+  final String rationale;
+
+  /// `image`, `audio` or `video`; absent for text.
+  final String? inputType;
+  final int? creditsUsed;
+  final double? processingTimeMs;
+  final String? language;
+  final String? languageStatus;
+  final String? externalId;
+  final String? customerId;
+  final Map<String, dynamic>? metadata;
+  final String? fileId;
+
+  /// The result exactly as the API sent it.
+  final Map<String, dynamic> raw;
+}
+
+// =============================================================================
+// Usage Summary and Quota
+// =============================================================================
+
+/// Request counts for one day, with the plan's limits.
+class UsageSummary {
+  const UsageSummary({
+    required this.tier,
+    required this.date,
+    required this.totalRequests,
+    required this.successRequests,
+    required this.errorRequests,
+    required this.requestsPerMinute,
+    required this.requestsPerMonth,
+    required this.requestsPerDay,
+    required this.remainingToday,
+    this.apiKeyId,
+  });
+
+  factory UsageSummary.fromJson(Map<String, dynamic> json) {
+    final usage = _optMap(json['usage']) ?? const {};
+    final quota = _optMap(json['quota']) ?? const {};
+    return UsageSummary(
+      apiKeyId: json['apiKeyId'] as String?,
+      tier: json['tier'] as String? ?? '',
+      date: json['date'] as String? ?? '',
+      totalRequests: _optInt(usage['totalRequests']) ?? 0,
+      successRequests: _optInt(usage['successRequests']) ?? 0,
+      errorRequests: _optInt(usage['errorRequests']) ?? 0,
+      requestsPerMinute: _optInt(quota['requestsPerMinute']) ?? 0,
+      requestsPerMonth: _optInt(quota['requestsPerMonth']) ?? 0,
+      requestsPerDay: _optInt(quota['requestsPerDay']) ?? 0,
+      remainingToday: _optInt(quota['remainingToday']) ?? 0,
+    );
+  }
+
+  final String? apiKeyId;
+  final String tier;
+  final String date;
+  final int totalRequests;
+  final int successRequests;
+  final int errorRequests;
+  final int requestsPerMinute;
+  final int requestsPerMonth;
+
+  /// -1 when the plan has no daily limit.
+  final int requestsPerDay;
+
+  /// -1 when the plan has no daily limit.
+  final int remainingToday;
+}
+
+/// Current rate-limit and quota state of the API key.
+class UsageQuota {
+  const UsageQuota({
+    required this.tier,
+    required this.requestsPerMinute,
+    required this.requestsPerMonth,
+    required this.requestsPerDay,
+    required this.requestsThisMinute,
+    required this.requestsToday,
+    required this.remainingThisMinute,
+    required this.remainingToday,
+    this.apiKeyId,
+    this.resetsInSeconds,
+  });
+
+  factory UsageQuota.fromJson(Map<String, dynamic> json) {
+    final limits = _optMap(json['limits']) ?? const {};
+    final current = _optMap(json['current']) ?? const {};
+    final remaining = _optMap(json['remaining']) ?? const {};
+    return UsageQuota(
+      apiKeyId: json['apiKeyId'] as String?,
+      tier: json['tier'] as String? ?? '',
+      requestsPerMinute: _optInt(limits['requestsPerMinute']) ?? 0,
+      requestsPerMonth: _optInt(limits['requestsPerMonth']) ?? 0,
+      requestsPerDay: _optInt(limits['requestsPerDay']) ?? 0,
+      requestsThisMinute: _optInt(current['requestsThisMinute']) ?? 0,
+      requestsToday: _optInt(current['requestsToday']) ?? 0,
+      remainingThisMinute: _optInt(remaining['requestsThisMinute']) ?? 0,
+      remainingToday: _optInt(remaining['requestsToday']) ?? 0,
+      resetsInSeconds: _optInt(json['resetsInSeconds']),
+    );
+  }
+
+  final String? apiKeyId;
+  final String tier;
+  final int requestsPerMinute;
+  final int requestsPerMonth;
+  final int requestsPerDay;
+  final int requestsThisMinute;
+  final int requestsToday;
+  final int remainingThisMinute;
+  final int remainingToday;
+
+  /// Seconds until the per-minute window resets.
+  final int? resetsInSeconds;
 }
