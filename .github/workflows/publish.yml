@@ -7,6 +7,9 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    # Without valid credentials `pub publish` waits for an interactive
+    # browser login and the job hangs until the 6 hour limit.
+    timeout-minutes: 15
 
     steps:
       - uses: actions/checkout@v7
@@ -21,9 +24,15 @@ jobs:
         run: flutter pub get
 
       - name: Setup credentials
+        env:
+          PUB_CREDENTIALS: ${{ secrets.PUB_CREDENTIALS }}
         run: |
-          mkdir -p $HOME/.config/dart
-          echo '${{ secrets.PUB_CREDENTIALS }}' > $HOME/.config/dart/pub-credentials.json
+          if [ -z "$PUB_CREDENTIALS" ]; then
+            echo "::error::The PUB_CREDENTIALS secret is not set, so pub.dev cannot be reached non-interactively."
+            exit 1
+          fi
+          mkdir -p "$HOME/.config/dart"
+          printf '%s' "$PUB_CREDENTIALS" > "$HOME/.config/dart/pub-credentials.json"
 
       - name: Publish
         run: flutter pub publish --force

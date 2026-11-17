@@ -8,24 +8,27 @@ A Flutter/Dart package for the Tuteliq child safety API. Detect bullying, groomi
 ## Install
 # pubspec.yaml
 dependencies:
-  tuteliq: ^1.0.0
+  tuteliq: ^2.4.0
 
 ## Quick Start
 import 'package:tuteliq/tuteliq.dart';
 final client = Tuteliq(apiKey: const String.fromEnvironment('TUTELIQ_API_KEY'));
-final result = await client.detectUnsafe(text: 'content to check', ageGroup: '13-15');
+final result = await client.detectUnsafe('content to check', context: const AnalysisContext(ageGroup: '13-15'));
 
 ## Key Features
 - Cross-platform (iOS, Android, web, desktop)
-- All 20+ Tuteliq API endpoints
+- 40+ Tuteliq API endpoints
 - 16+ detection categories (KOSA compliant)
 - Age group calibration
 - Dart-idiomatic async API
-- Age Verification (Beta) — POST /v1/verification/age — Pro tier ($99/mo)+, 5 credits
-- Identity Verification (Beta) — POST /v1/verification/identity — Business tier ($349/mo)+, 10 credits
+- Hosted age and identity verification sessions: createVerificationSession, getVerificationSession, cancelVerificationSession (POST/GET/DELETE /api/v1/verify/session)
+- Image match: verifyImageMatch (POST /api/v1/verify-image-match)
+- Incidents: listIncidents, getIncident, getIncidentsOverview, getIncidentTrends, reviewIncident, batchReviewIncidents
+- Document analysis (PDF or image), synthetic content detection (text, image, audio, video), nickname, distress signals
+- Voice streaming over WebSocket (wss://api.tuteliq.ai/api/v1/safety/voice/stream)
 
 ## Supported Languages
-27 languages: English (stable), Spanish, Portuguese, Ukrainian, Swedish, Norwegian, Danish, Finnish, German, French, Dutch, Polish, Italian, Turkish, Romanian, Greek, Czech, Hungarian, Bulgarian, Croatian, Slovak, Lithuanian, Latvian, Estonian, Slovenian, Maltese, Irish (beta). Auto-detected, no configuration needed.
+32 languages: English (stable); Spanish, Portuguese, Ukrainian, Swedish, Norwegian, Danish, Finnish, German, French, Dutch, Polish, Italian, Turkish, Romanian, Greek, Czech, Hungarian, Bulgarian, Croatian, Slovak, Lithuanian, Latvian, Estonian, Slovenian, Maltese, Irish, Chinese, Japanese, Korean, Arabic, Russian (beta). Auto-detected, no configuration needed.
 
 ## Links
 - Website: https://tuteliq.ai

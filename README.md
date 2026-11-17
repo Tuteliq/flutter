@@ -30,7 +30,7 @@ Add to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  tuteliq: ^1.0.0
+  tuteliq: ^2.4.0
 ```
 
 Then run:
@@ -193,44 +193,150 @@ print('Risk: ${report.riskLevel.value}');
 print('Next Steps: ${report.recommendedNextSteps}');
 ```
 
-### Age Verification (Beta)
+### Verification
 
-> **Pro tier ($99/mo)+ required** — 5 credits per request — `POST /v1/verification/age`
+Age and identity verification run as a hosted session: you create a session, the user completes it on their phone (document photo or chip read, and a live selfie), and you read the outcome by polling or from the `verification.completed` webhook. Document and selfie images never pass through your app.
 
 ```dart
-final ageResult = await client.verifyAge(
-  document: File('id-front.jpg'),
-  selfie: File('selfie.jpg'),
-  method: VerificationMethod.combined, // .document | .biometric | .combined
+final session = await client.createVerificationSession(
+  const CreateVerificationSessionInput(
+    mode: VerificationMode.age, // or VerificationMode.identity
+    documentType: VerificationDocumentType.passport, // optional: passport, nationalId, driversLicense
+    chipPolicy: ChipPolicy.optional, // optional: optional, required, insteadOfPhoto
+    autoCapture: true, // optional, default true
+  ),
 );
 
-print(ageResult.verified);       // true
-print(ageResult.estimatedAge);   // 15
-print(ageResult.ageRange);       // "13-15"
-print(ageResult.isMinor);        // true
-print(ageResult.confidence);     // 0.97
+// Open on the user's phone, or show as a QR code.
+print(session.mobileUrl);
+print('Expires at ${session.expiresAtTime}');
+
+// Poll for the outcome.
+final status = await client.getVerificationSession(session.sessionId);
+switch (status.status) {
+  case VerificationSessionStatus.completed:
+    final result = status.result!;
+    print('Minor: ${result.isMinor}, age: ${result.age}');
+    print('Face match: ${result.faceMatch?.matched} (${result.faceMatch?.matchScore})');
+    break;
+  case VerificationSessionStatus.failed:
+    print('Failed: ${status.result?.failureReasons}');
+    break;
+  default:
+    print('Status: ${status.rawStatus} (${status.stepProgress})');
+}
+
+// Cancel a session the user abandoned.
+await client.cancelVerificationSession(session.sessionId);
 ```
 
-### Identity Verification (Beta)
+Session statuses: `pending`, `in_progress`, `document_required`, `completed`, `failed`, `expired`. A status newer than the SDK parses to `VerificationSessionStatus.unknown`, with the original value in `rawStatus`. Identity fields extracted from the document are returned once, to the API key that created the session.
 
-> **Business tier ($349/mo)+ required** — 10 credits per request — `POST /v1/verification/identity`
+### Image Match
+
+Run face matching, age estimation and forensic checks on one image. Images are processed in memory and never stored.
 
 ```dart
-final identityResult = await client.verifyIdentity(
-  document: File('id-front.jpg'),
-  selfie: File('selfie.jpg'),
+final match = await client.verifyImageMatch(
+  image: selfieBytes,
+  referenceImage: profilePhotoBytes,
+  checks: [ImageMatchCheck.faceMatch, ImageMatchCheck.age],
+);
+print('${match.faceMatch?.matched} ${match.estimatedAge}');
+```
+
+### Incidents
+
+Read and moderate the incidents recorded for your account.
+
+```dart
+final page = await client.listIncidents(
+  const ListIncidentsInput(category: 'grooming', status: 'new', limit: 25),
+);
+for (final incident in page.incidents) {
+  print('${incident.id}: ${incident.riskCategory} ${incident.riskLevel}');
+}
+// Next page: ListIncidentsInput(cursor: page.nextCursor)
+
+final overview = await client.getIncidentsOverview();
+final trends = await client.getIncidentTrends(bucket: 'day');
+final incident = await client.getIncident('inc_123');
+
+await client.reviewIncident(
+  'inc_123',
+  const ReviewIncidentInput(
+    action: 'escalate',
+    reasonCode: 'confirmed_accurate',
+    moderatorExternalId: 'moderator_42',
+  ),
 );
 
-print(identityResult.verified);               // true
-print(identityResult.matchScore);             // 0.98
-print(identityResult.livenessPassed);         // true
-print(identityResult.documentAuthenticated);  // true
-print(identityResult.isMinor);               // false
+await client.batchReviewIncidents(
+  ['inc_124', 'inc_125'],
+  const ReviewIncidentInput(
+    action: 'dismiss',
+    reasonCode: 'false_positive',
+    moderatorExternalId: 'moderator_42',
+  ),
+);
+```
+
+### More Detectors
+
+```dart
+// Distress signals and technology-facilitated gender-based violence
+final distress = await client.detectDistressSignals(
+  const DetectionInput(content: 'Message to check'),
+);
+final tfgbv = await client.detectTfgbv(
+  const DetectionInput(content: 'Message to check'),
+);
+
+// Display names
+final nickname = await client.detectNickname(
+  const DetectNicknameInput(name: 'PlayerName', conversationType: 'gaming_chat'),
+);
+print(nickname.recommendation); // allow, allow_and_watch, ask_to_rename, hold_for_review
+
+// Synthetic (AI-generated) content
+final text = await client.detectSyntheticText('Text to check');
+final image = await client.detectSyntheticImage(file: imageBytes, filename: 'photo.jpg');
+final audio = await client.detectSyntheticAudio(file: audioBytes, filename: 'voice.mp3');
+final video = await client.detectSyntheticVideo(file: videoBytes, filename: 'clip.mp4');
+print(image.classification); // confirmed_synthetic, suspected_synthetic, unknown, confirmed_authentic
+```
+
+### Webhooks
+
+```dart
+final created = await client.createWebhook(
+  const CreateWebhookInput(
+    name: 'Safety alerts',
+    url: 'https://example.com/tuteliq-webhook',
+    events: [WebhookEventType.incidentCritical, WebhookEventType.groomingDetected],
+  ),
+);
+print(created.webhook.secret); // returned only on creation; store it
+
+final hooks = await client.listWebhooks();
+await client.updateWebhook(created.webhook.id, const UpdateWebhookInput(active: false));
+final test = await client.testWebhook(created.webhook.id);
+print('${test.success} ${test.statusCode} ${test.latencyMs}ms');
+final rotated = await client.regenerateWebhookSecret(created.webhook.id);
+await client.deleteWebhook(created.webhook.id);
+```
+
+### File Uploads
+
+Image, voice, video, document and synthetic media uploads are sent with the content type of the filename extension (`.png`, `.jpg`, `.gif`, `.webp`, `.mp3`, `.wav`, `.m4a`, `.ogg`, `.flac`, `.mp4`, `.webm`, `.mov`, `.avi`, `.pdf`). When the filename has no extension, common formats are recognised from their first bytes. Pass `contentType` to set it yourself:
+
+```dart
+await client.analyzeImage(file: bytes, filename: 'capture', contentType: 'image/jpeg');
 ```
 
 ### Voice Streaming
 
-Real-time voice analysis over WebSocket:
+Real-time voice analysis over WebSocket. The connection authenticates with your API key during the WebSocket handshake, so it works on mobile, desktop and the web:
 
 ```dart
 final session = client.voiceStream(
@@ -260,7 +366,7 @@ session.close();
 
 ### Document Analysis
 
-Analyze PDF documents for safety concerns across multiple detection endpoints. Each page is processed independently with text extraction (native text layer or OCR fallback).
+Analyze a PDF, or an image read as a one-page document (png, jpeg, webp), across multiple detection endpoints. Each page is processed independently. For a messaging screenshot, set `splitBySender: true` to judge the last received message with the rest as history.
 
 ```dart
 import 'dart:io';
@@ -282,7 +388,7 @@ print('Flagged pages: ${result.flaggedPages.length}');
 print('Credits used: ${result.creditsUsed}');
 
 for (final page in result.flaggedPages) {
-  print('Page ${page.pageNumber}: ${page.severity} — ${page.detectedEndpoints}');
+  print('Page ${page.pageNumber}: ${page.severity}, ${page.detectedEndpoints}');
 }
 ```
 
@@ -308,8 +414,6 @@ print('Credits used: ${result.creditsUsed}');
 | `analyzeVoice()` | 5 |
 | `analyzeImage()` | 3 |
 | `analyzeDocument()` | dynamic (pages x endpoints) |
-| `verifyAge()` | 5 |
-| `verifyIdentity()` | 10 |
 
 ---
 
@@ -488,11 +592,11 @@ Enable `PII_REDACTION_ENABLED=true` on your Tuteliq API to automatically strip e
 
 ## Supported Languages
 
-Tuteliq supports **27 languages** with automatic detection — no configuration required.
+Tuteliq supports **32 languages** with automatic detection, no configuration required.
 
-**English** (stable) and **26 beta languages**: Spanish, Portuguese, Ukrainian, Swedish, Norwegian, Danish, Finnish, German, French, Dutch, Polish, Italian, Turkish, Romanian, Greek, Czech, Hungarian, Bulgarian, Croatian, Slovak, Lithuanian, Latvian, Estonian, Slovenian, Maltese, and Irish.
+**English** (stable) and **31 beta languages**: Spanish, Portuguese, Ukrainian, Swedish, Norwegian, Danish, Finnish, German, French, Dutch, Polish, Italian, Turkish, Romanian, Greek, Czech, Hungarian, Bulgarian, Croatian, Slovak, Lithuanian, Latvian, Estonian, Slovenian, Maltese, Irish, Chinese, Japanese, Korean, Arabic and Russian.
 
-All 24 EU official languages + Ukrainian, Norwegian, and Turkish. Each language includes culture-specific safety guidelines covering local slang, grooming patterns, self-harm coded vocabulary, and filter evasion techniques.
+The `Language` enum lists every code. A code the SDK does not know yet parses to `Language.unknown` instead of throwing.
 
 See the [Language Support docs](https://docs.tuteliq.ai/languages) for details.
 
