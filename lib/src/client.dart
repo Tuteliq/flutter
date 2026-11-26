@@ -332,6 +332,7 @@ class Tuteliq {
 
     if (input.childAge != null) body['child_age'] = input.childAge;
     if (input.severity != null) body['severity'] = input.severity!.value;
+    if (input.country != null) body['country'] = input.country;
     if (input.externalId != null) body['external_id'] = input.externalId;
     if (input.metadata != null) body['metadata'] = input.metadata;
 

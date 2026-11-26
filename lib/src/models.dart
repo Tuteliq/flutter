@@ -172,6 +172,7 @@ class GetActionPlanInput {
     this.childAge,
     this.audience,
     this.severity,
+    this.country,
     this.externalId,
     this.metadata,
   });
@@ -180,6 +181,11 @@ class GetActionPlanInput {
   final int? childAge;
   final Audience? audience;
   final Severity? severity;
+
+  /// The family's country as an ISO 3166-1 alpha-2 code (for example 'SE'),
+  /// so the plan names that country's helplines and emergency number.
+  /// Defaults to the account's country.
+  final String? country;
   final String? externalId;
   final Map<String, dynamic>? metadata;
 }
@@ -459,6 +465,7 @@ class ActionPlanResult {
     required this.tone,
     required this.resources,
     required this.urgency,
+    this.generalGuidance,
     this.externalId,
     this.metadata,
     this.creditsUsed,
@@ -470,6 +477,7 @@ class ActionPlanResult {
       tone: json['tone'] as String,
       resources: List<String>.from(json['resources'] as List),
       urgency: json['urgency'] as String,
+      generalGuidance: json['general_guidance'] as bool?,
       externalId: json['external_id'] as String?,
       metadata: json['metadata'] as Map<String, dynamic>?,
       creditsUsed: json['credits_used'] as int?,
@@ -480,6 +488,11 @@ class ActionPlanResult {
   final String tone;
   final List<String> resources;
   final String urgency;
+
+  /// True when the plan is general guidance for any harm, given because a
+  /// plan tailored to the situation could not be written. Null (absent) for a
+  /// tailored plan.
+  final bool? generalGuidance;
   final String? externalId;
   final Map<String, dynamic>? metadata;
   final int? creditsUsed;
