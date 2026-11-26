@@ -1,5 +1,34 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:tuteliq/tuteliq.dart';
+
+/// Runs [body] with a client whose HTTP calls are answered by [response].
+/// Every request body the client sends is added to [sent].
+Future<void> withStubbedClient(
+  Map<String, dynamic> response,
+  List<Map<String, dynamic>> sent,
+  Future<void> Function(Tuteliq client) body,
+) {
+  final stub = MockClient((request) async {
+    sent.add(jsonDecode(request.body) as Map<String, dynamic>);
+    return http.Response(
+      jsonEncode(response),
+      200,
+      headers: {'content-type': 'application/json'},
+    );
+  });
+  return http.runWithClient(() async {
+    final client = Tuteliq(apiKey: 'test-api-key-12345', maxRetries: 1);
+    try {
+      await body(client);
+    } finally {
+      client.close();
+    }
+  }, () => stub);
+}
 
 void main() {
   group('Client Initialization', () {
@@ -161,6 +190,43 @@ void main() {
       expect(input.messages.length, 2);
       expect(input.childAge, 14);
       expect(input.incidentType, 'bullying');
+    });
+  });
+
+  group('Action Plan', () {
+    const tailored = <String, dynamic>{
+      'steps': ['Invented step'],
+      'tone': 'calm',
+      'resources': <String>[],
+      'urgency': 'low',
+    };
+
+    test('sends country when set', () async {
+      final sent = <Map<String, dynamic>>[];
+      await withStubbedClient(tailored, sent, (client) async {
+        await client.getActionPlan(
+          const GetActionPlanInput(situation: 'Invented situation', country: 'SE'),
+        );
+      });
+      expect(sent.single['country'], 'SE');
+    });
+
+    test('omits country when not set', () async {
+      final sent = <Map<String, dynamic>>[];
+      await withStubbedClient(tailored, sent, (client) async {
+        await client.getActionPlan(
+          const GetActionPlanInput(situation: 'Invented situation'),
+        );
+      });
+      expect(sent.single.containsKey('country'), isFalse);
+    });
+
+    test('decodes general_guidance', () {
+      final general = ActionPlanResult.fromJson({...tailored, 'general_guidance': true});
+      expect(general.generalGuidance, isTrue);
+
+      final plan = ActionPlanResult.fromJson(tailored);
+      expect(plan.generalGuidance, isNull);
     });
   });
 

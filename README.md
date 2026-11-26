@@ -168,12 +168,18 @@ final plan = await client.getActionPlan(
     childAge: 12,
     audience: Audience.child,
     severity: Severity.medium,
+    country: 'SE',
   ),
 );
 
 print('Steps: ${plan.steps}');
 print('Tone: ${plan.tone}');
+print('General guidance: ${plan.generalGuidance == true}');
 ```
+
+`country` is the family's country as an ISO 3166-1 alpha-2 code (for example `'SE'`), so the plan names that country's helplines and emergency number. It defaults to the account's country; with neither, the plan names the kind of service to contact.
+
+`generalGuidance` is `true` when the plan is general guidance for any harm, given because a plan tailored to the situation could not be written; it is `null` for a tailored plan.
 
 ### Incident Report
 
